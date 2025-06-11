@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Scrapy cache
+.scrapy/
+*.log
+
+# Python virtual environment
+venv/
+ENV/
+env/
+
+# PDF output files (e.g., chapter-1.pdf ~ chapter-999.pdf)
+*.pdf
+
+# VSCode and other IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# MacOS system files
+.DS_Store
+
+# pyproject/build tools
+build/
+dist/
+*.egg-info/
+
+
+.history
+
+downloads
