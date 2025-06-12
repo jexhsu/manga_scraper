@@ -22,9 +22,14 @@ def convert_chapter_to_pdf(chapter_path):
 
     if not images:
         print(f"⚠️ No images found in {chapter_path}, skipping.\n")
+        # Rename the directory with -xxx suffix since it's incomplete
+        new_chapter_path = f"{chapter_path}-xxx"
+        os.rename(chapter_path, new_chapter_path)
+        print(f"📛 Renamed incomplete chapter to: {new_chapter_path}\n")
         return
 
     converted_images = []
+    failed_files = []
     for img_path in images:
         try:
             with Image.open(img_path) as img:
@@ -33,10 +38,18 @@ def convert_chapter_to_pdf(chapter_path):
                 rgb_img.save(jpg_path, "JPEG")
                 converted_images.append(jpg_path)
         except Exception as e:
-            print(f"⚠️ Failed to convert image {img_path}: {e}, skipping.")
+            # Extract just the filename and add to failed_files array
+            failed_files.append(img_path.split('/')[-1])
+    
+    if failed_files:
+        print(f"⚠️ Failed to convert images: {failed_files}")
 
     if not converted_images:
         print(f"❌ All images in {chapter_path} failed to convert, skipping PDF generation.")
+        # Rename the directory with -xxx suffix since it's incomplete
+        new_chapter_path = f"{chapter_path}-xxx"
+        os.rename(chapter_path, new_chapter_path)
+        print(f"📛 Renamed incomplete chapter to: {new_chapter_path}\n")
         return
 
     try:
@@ -45,6 +58,10 @@ def convert_chapter_to_pdf(chapter_path):
         print(f"✅ PDF created: {output_file}")
     except Exception as e:
         print(f"❌ Failed to create PDF for {chapter_name}: {e}")
+        # Rename the directory with -xxx suffix since PDF creation failed
+        new_chapter_path = f"{chapter_path}-xxx"
+        os.rename(chapter_path, new_chapter_path)
+        print(f"📛 Renamed incomplete chapter to: {new_chapter_path}\n")
         return
 
     print(f"🗑️ Removed folder: {chapter_path}\n")
