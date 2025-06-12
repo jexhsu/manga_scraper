@@ -8,6 +8,7 @@ class DarkGatheringSpider(BaseMangaSpider):
     chapter_list_selector = '#ceo_latest_comics_widget-3 ul li a::attr(href)'
     chapter_pattern = r'chapter-(.+?)/'
     start_url = "https://dark-gathering.com"
+    start_chapter = 0
 
     url_template = "https://dark-gathering.com/manga/dark-gathering-chapter-{chapter}/"
     image_selector = "img"

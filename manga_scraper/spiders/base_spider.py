@@ -7,7 +7,6 @@ import sys
 import logging
 import re
 
-
 # TODO 无法合并的章节，文件夹命名添加 "-xxx" 例如： chapter-96-xxx chapter-95-xxx
 
 # Disable Scrapy's default logs
@@ -21,12 +20,17 @@ class BaseMangaSpider(scrapy.Spider):
     chapter_list_selector = 'a.chapter-link::attr(href)'  
     chapter_pattern = r'chapter-(\d+)'
     start_chapter = 0
+    paginate=False
     url_template = "https://example.com/manga/chapter-{chapter}/"
     start_url = "https://example.com"
     image_selector = "img.page-image"
     image_attr = "src"
     file_ext = ".jpg"
     root_dir = "downloads"
+
+    page = 1
+    all_chapters = []
+    has_more_pages = True
 
     custom_settings = {
         'LOG_LEVEL': 'ERROR',
@@ -41,10 +45,31 @@ class BaseMangaSpider(scrapy.Spider):
         print(f"\n🚀 Starting download for site: {self.site_name}\n")
         yield scrapy.Request(url=self.start_url, callback=self.parse_chapter_list)
 
-
     def parse_chapter_list(self, response):
         """Parse the chapter list page and extract all chapters"""
-        raw_chapters = response.css(self.chapter_list_selector).re(self.chapter_pattern)
+        if self.paginate:
+            # Extract chapter identifiers from the current page
+            chapters = response.css(self.chapter_list_selector).re(self.chapter_pattern)
+            # Filter out previously seen chapters to avoid duplication
+            new_chapters = [c for c in chapters if c not in self.all_chapters]
+            self.all_chapters.extend(new_chapters)
+
+            # If no new chapters are found, terminate pagination
+            if not new_chapters:
+                self.has_more_pages = False
+
+            # Continue pagination if more pages are available
+            if self.has_more_pages:
+                self.page += 1
+                next_page = f"{self.start_url}?page={self.page}"
+                yield scrapy.Request(url=next_page, callback=self.parse_chapter_list)
+                return
+
+            # All paginated data collected
+            raw_chapters = self.all_chapters
+        else:
+            # For single-page chapter lists
+            raw_chapters = response.css(self.chapter_list_selector).re(self.chapter_pattern)
         
         # Remove duplicates while preserving order
         seen = set()
@@ -163,7 +188,7 @@ class BaseMangaSpider(scrapy.Spider):
             yield from self.next_chapter()
             return
 
-        progress_text = f"⏳ Chapter {chapter}: {self.progress_bar(downloaded, total)} ({downloaded}/{total})"
+        progress_text = f"⏳ Chapter {chapter}: {self.progress_bar(downloaded, total)} ({downloaded}/{total}) "
         self.update_progress(progress_text)
 
         if index + 1 < total:

@@ -9,9 +9,8 @@ class tonikaku_kawaiiSpider(BaseMangaSpider):
     chapter_list_selector = 'li a::attr(href)'
     chapter_pattern = r'chapter-(.+?)/'
     start_url="https://w3.tonikakukawaii.com"
-    start_chapter = 269
 
-    url_template = "https://w3.tonikakukawaii.com/manga/tonikaku-kawaii-chapter-{chapter}/"
+    url_template = "https://w3.tonikakukawaii.com/manga/tonikaku-cawaii-chapter-{chapter}/"
     image_selector = "div img.aligncenter"
     image_attr = "src"
     image_host_filters = allowed_domains
