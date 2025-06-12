@@ -1,37 +1,51 @@
 import scrapy
-import os
-import img2pdf
-from PIL import Image
-import shutil
-import sys
 import logging
-import re
+from manga_scraper.utils.pdf_converter import convert_chapter_to_pdf
+from manga_scraper.utils.progress_bar import ProgressBar
+from manga_scraper.utils.paginator import ChapterPaginator
+from manga_scraper.utils.chapter_sorter import ChapterSorter
+from manga_scraper.utils.chapter_index import ChapterIndexResolver
+from manga_scraper.utils.download_manager import download_and_save_image
+from manga_scraper.utils.chapter_downloader import prepare_chapter_download
+from manga_scraper.utils.chapter_requester import request_next_chapter
+from manga_scraper.utils.chapter_display import print_chapter_summary
 
-# TODO 无法合并的章节，文件夹命名添加 "-xxx" 例如： chapter-96-xxx chapter-95-xxx
+# TODO: For chapters that cannot be merged into a complete volume, append a suffix "-xxx" to the directory name.
+#       Example: chapter-96-xxx, chapter-95-xxx
 
-# Disable Scrapy's default logs
+# Suppress default Scrapy logging output to reduce verbosity
 logging.getLogger('scrapy').setLevel(logging.WARNING)
 
 class BaseMangaSpider(scrapy.Spider):
+    # Core spider metadata
     name = "base_manga_spider"
     site_name = "site_name"
     allowed_domains = ["example.com"]
-    chapter_list = [""]                    
-    chapter_list_selector = 'a.chapter-link::attr(href)'  
-    chapter_pattern = r'chapter-(\d+)'
-    start_chapter = 0
-    paginate=False
-    url_template = "https://example.com/manga/chapter-{chapter}/"
-    start_url = "https://example.com"
-    image_selector = "img.page-image"
-    image_attr = "src"
-    file_ext = ".jpg"
-    root_dir = "downloads"
 
+    # Configuration for chapter extraction
+    chapter_list = [""]
+    chapter_list_selector = 'a.chapter-link::attr(href)'  # CSS selector for chapter URLs
+    chapter_pattern = r'chapter-(\d+)'  # Regex pattern to extract chapter number
+    start_chapter = 0  # Starting chapter number
+    paginate = False  # Flag indicating whether pagination is used
+    url_template = "https://example.com/manga/chapter-{chapter}/"  # URL format string for chapter pages
+    start_url = "https://example.com"
+
+    # Image-related configuration
+    image_selector = "img.page-image"  # CSS selector for image elements
+    image_attr = "src"  # Attribute containing the image URL
+    file_ext = ".jpg"  # Default image file extension
+    root_dir = "downloads"  # Root directory for storing downloaded content
+
+    # Pagination-related state variables
     page = 1
     all_chapters = []
     has_more_pages = True
 
+    # Download progress bar instance
+    progress_bar = ProgressBar()
+
+    # Custom spider-specific Scrapy settings
     custom_settings = {
         'LOG_LEVEL': 'ERROR',
         'TELNETCONSOLE_ENABLED': False
@@ -41,128 +55,84 @@ class BaseMangaSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
         self.last_progress_length = 0
 
+        # Instantiate the paginator for chapter list pagination
+        self.paginator = ChapterPaginator(
+            start_url=self.start_url,
+            selector=self.chapter_list_selector,
+            pattern=self.chapter_pattern
+        )
+
     def start_requests(self):
+        """Trigger the initial request to the starting URL to begin scraping"""
         print(f"\n🚀 Starting download for site: {self.site_name}\n")
         yield scrapy.Request(url=self.start_url, callback=self.parse_chapter_list)
 
     def parse_chapter_list(self, response):
-        """Parse the chapter list page and extract all chapters"""
+        """Extract the full list of chapters from the manga main page"""
         if self.paginate:
-            # Extract chapter identifiers from the current page
-            chapters = response.css(self.chapter_list_selector).re(self.chapter_pattern)
-            # Filter out previously seen chapters to avoid duplication
-            new_chapters = [c for c in chapters if c not in self.all_chapters]
-            self.all_chapters.extend(new_chapters)
-
-            # If no new chapters are found, terminate pagination
-            if not new_chapters:
-                self.has_more_pages = False
-
-            # Continue pagination if more pages are available
-            if self.has_more_pages:
-                self.page += 1
-                next_page = f"{self.start_url}?page={self.page}"
+            # If pagination is enabled, recursively fetch all pages
+            self.paginator.extract_chapters(response)
+            if self.paginator.has_more_pages:
+                next_page = self.paginator.next_page_url()
                 yield scrapy.Request(url=next_page, callback=self.parse_chapter_list)
                 return
-
-            # All paginated data collected
-            raw_chapters = self.all_chapters
+            raw_chapters = self.paginator.all_chapters
         else:
-            # For single-page chapter lists
+            # Directly extract chapter identifiers without pagination
             raw_chapters = response.css(self.chapter_list_selector).re(self.chapter_pattern)
-        
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_chapters = []
-        for chap in raw_chapters:
-            if chap not in seen:
-                seen.add(chap)
-                unique_chapters.append(chap)
 
-        # Custom sorting function to handle both simple and special chapter numbers like '38-5'
-        def chapter_sort_key(chap):
-            # Match chapter number and possible suffix like '38-5'
-            match = re.match(r'(\d+)(?:-(\d+))?', chap)
-            if match:
-                main_num = int(match.group(1))  # The main chapter number
-                sub_num = int(match.group(2) or 0)  # The sub-number (default to 0 if no suffix)
-                return (main_num, sub_num)
-            return (float('inf'), 0)  # Handle any non-matching entries as very high numbers
+        # Remove duplicates and sort chapter identifiers
+        self.chapter_list = ChapterSorter.sort_and_deduplicate(raw_chapters)
 
-        # Sort chapters based on the custom sorting key
-        self.chapter_list = sorted(unique_chapters, key=chapter_sort_key)
+        # Print a summary of unique chapters without flooding the console
+        print_chapter_summary(self.chapter_list)
 
-        print(f"📚 Found {len(self.chapter_list)} unique chapters")
-        print(f"📚 Unique chapter list: {self.chapter_list}")
-
-        if self.start_chapter >= len(self.chapter_list) or self.start_chapter < 0:
-                  print(f"⚠️ start_chapter {self.start_chapter} out of range, reset to 0")
-                  self.start_chapter = 0
-                  
-        # Check if start_chapter exists in chapter_list and set it as the new start index
-        try:
-            # Find the position of the chapter in the sorted list and use that as the new start_chapter
-            self.chapter_index = self.chapter_list.index(str(self.start_chapter))
-            print(f"📍 Starting download from chapter {self.start_chapter} at index {self.chapter_index}")
-        except ValueError:
-            # If start_chapter is not found, reset to the first chapter
-            print(f"⚠️ start_chapter {self.start_chapter} not found, resetting to index 0")
-            self.chapter_index = 0
-        
-
+        # Determine the index from which to start downloading
+        self.chapter_index = ChapterIndexResolver.resolve_index(self.chapter_list, self.start_chapter)
+        print(f"📍 Starting download from chapter {self.start_chapter} at index {self.chapter_index}")
         
         if self.chapter_list:
+            # Initiate download for the first chapter in the resolved list
             yield scrapy.Request(
                 url=self.url_template.format(chapter=self.chapter_list[self.chapter_index]),
                 callback=self.parse_chapter,
                 meta={'chapter': self.chapter_list[self.chapter_index]},
-                errback=self.handle_error  # Set the error handler here
+                errback=self.handle_error
             )
         else:
             print("⚠️ No chapters found")
 
     def parse_chapter(self, response):
+        """Parse a chapter page and initiate download of all images within the chapter"""
         chapter = response.meta['chapter']
         img_urls = response.css(f"{self.image_selector}::attr({self.image_attr})").getall()
-        total = len(img_urls)
 
-        if total == 0:
-            print(f"\n⚠️ Chapter {chapter}: No images found, skipping.\n")
-            yield from self.next_chapter()
+        # Determine whether to skip the chapter and prepare relevant metadata
+        skip, folder, meta = prepare_chapter_download(
+            root_dir=self.root_dir,
+            site_name=self.site_name,
+            chapter=chapter,
+            img_urls=img_urls,
+            file_ext=self.file_ext,
+            progress_bar=self.progress_bar
+        )
+
+        if skip:
+            # Skip this chapter and proceed to the next one
+            yield from request_next_chapter(self)
             return
 
-        folder = os.path.join(self.root_dir, self.site_name, f"chapter-{chapter}")
-        os.makedirs(folder, exist_ok=True)
-
-        existing = len([f for f in os.listdir(folder) if f.endswith(self.file_ext)])
-        pdf_file = os.path.join(self.root_dir, self.site_name, f"chapter-{chapter}.pdf")
-        if os.path.exists(pdf_file):
-                print(f"\n✅ Chapter {chapter}: Already downloaded, skip.")
-                if os.path.exists(folder):
-                    shutil.rmtree(folder)
-                    print(f"🗑️ Removed folder: {folder}\n")
-                yield from self.next_chapter()
-                return
-
-        print(f"\n📥 Chapter {chapter}: Downloading {total} images...")
-        self.last_progress_length = 0
-        
+        # Start downloading the first image of the chapter
         yield scrapy.Request(
             url=img_urls[0],
             callback=self.download_image,
-            errback=self.handle_error,  # Set the error handler here too
-            meta={
-                'chapter': chapter,
-                'img_urls': img_urls,
-                'index': 0,
-                'folder': folder,
-                'total': total,
-                'downloaded': 0
-            },
+            errback=self.handle_error,
+            meta=meta,
             dont_filter=True
         )
 
     def download_image(self, response):
+        """Download a single image and continue downloading remaining images recursively"""
         chapter = response.meta['chapter']
         img_urls = response.meta['img_urls']
         index = response.meta['index']
@@ -170,28 +140,17 @@ class BaseMangaSpider(scrapy.Spider):
         total = response.meta['total']
         downloaded = response.meta['downloaded'] + 1
 
-        # Check for a failed image download (non-image or error response)
-        if response.status != 200:
-            print(f"❌ Error downloading image for chapter {chapter}, skipping entire chapter.")
-            yield from self.next_chapter()
+        if not download_and_save_image(response, img_urls, index, folder, self.file_ext):
+            # If download fails, proceed to the next chapter
+            yield from request_next_chapter(self)
             return
 
-        ext = os.path.splitext(img_urls[index])[1].split('?')[0].lower() or self.file_ext
-        filename = f"{index+1:03d}{ext}"
-        path = os.path.join(folder, filename)
-
-        try:
-            with open(path, 'wb') as f:
-                f.write(response.body)
-        except Exception as e:
-            print(f"❌ Error saving image {filename} for chapter {chapter}: {e}")
-            yield from self.next_chapter()
-            return
-
-        progress_text = f"⏳ Chapter {chapter}: {self.progress_bar(downloaded, total)} ({downloaded}/{total}) "
-        self.update_progress(progress_text)
+        # Update the download progress bar in the terminal
+        progress_text = f"⏳ Chapter {chapter}: {self.progress_bar.progress_bar(downloaded, total)} ({downloaded}/{total}) "
+        self.progress_bar.update_progress(progress_text)
 
         if index + 1 < total:
+            # Continue downloading the next image
             yield scrapy.Request(
                 url=img_urls[index + 1],
                 callback=self.download_image,
@@ -207,89 +166,14 @@ class BaseMangaSpider(scrapy.Spider):
                 dont_filter=True
             )
         else:
-            self.clear_progress()
-            print(f"\n✅ Chapter {chapter}: Download completed!")
-            self.convert_chapter_to_pdf(folder)
-            yield from self.next_chapter()
-
-    def next_chapter(self):
-        self.chapter_index += 1
-        if self.chapter_index < len(self.chapter_list):
-            next_chapter = self.chapter_list[self.chapter_index]
-            yield scrapy.Request(
-                url=self.url_template.format(chapter=next_chapter),
-                callback=self.parse_chapter,
-                meta={'chapter': next_chapter},
-                errback=self.handle_error  # Set the error handler here too
-            )
-        else:
-            print("\n🎉 All chapters downloaded and converted!\n")
+            # Once all images are downloaded, convert the folder to PDF
+            self.progress_bar.clear_progress()
+            logging.info(f"✅ Chapter {chapter}: Download completed!")
+            convert_chapter_to_pdf(folder)
+            yield from request_next_chapter(self)
 
     def handle_error(self, failure):
-        """Error handling when a chapter fails to download"""
+        """Handle exceptions or request failures gracefully and move to the next chapter"""
         chapter = failure.request.meta['chapter']
-        print(f"\n❌ Error occurred while downloading chapter {chapter}: {failure.value}\n")
-        yield from self.next_chapter()
-
-    def convert_chapter_to_pdf(self, chapter_path):
-        chapter_name = os.path.basename(chapter_path)
-        output_dir = os.path.dirname(chapter_path)
-        output_file = os.path.join(output_dir, f"{chapter_name}.pdf")
-
-        if os.path.exists(output_file):
-            print(f"⏭️ PDF already exists: {output_file}, skipping.\n")
-            return
-
-        images = sorted([
-            os.path.join(chapter_path, f)
-            for f in os.listdir(chapter_path)
-            if f.lower().endswith(('.webp', '.jpg', '.jpeg', '.png'))
-        ])
-
-        if not images:
-            print(f"⚠️ No images found in {chapter_path}, skipping.\n")
-            return
-
-        converted_images = []
-        for img_path in images:
-            try:
-                with Image.open(img_path) as img:
-                    rgb_img = img.convert("RGB")
-                    jpg_path = img_path + ".jpg"
-                    rgb_img.save(jpg_path, "JPEG")
-                    converted_images.append(jpg_path)
-            except Exception as e:
-                print(f"⚠️ Failed to convert image {img_path}: {e}, skipping.")
-
-        if not converted_images:
-            print(f"❌ All images in {chapter_path} failed to convert, skipping PDF generation.")
-            return
-
-        try:
-            with open(output_file, "wb") as f:
-                f.write(img2pdf.convert(converted_images))
-            print(f"✅ PDF created: {output_file}")
-        except Exception as e:
-            print(f"❌ Failed to create PDF for {chapter_name}: {e}")
-            return
-
-        print(f"🗑️ Removed folder: {chapter_path}\n")
-        for temp_img in converted_images:
-            os.remove(temp_img)
-        shutil.rmtree(chapter_path)
-
-
-    def progress_bar(self, current, total, width=20):
-        filled = int(current / total * width) if total > 0 else 0
-        return "[" + "█" * filled + "-" * (width - filled) + "]"
-
-    def update_progress(self, text):
-        sys.stdout.write("\r" + " " * self.last_progress_length)
-        sys.stdout.write("\r" + text)
-        sys.stdout.flush()
-        self.last_progress_length = len(text)
-
-    def clear_progress(self):
-        sys.stdout.write("\r" + " " * self.last_progress_length + "\r")
-        sys.stdout.flush()
-        self.last_progress_length = 0
+        logging.error(f"❌ Error occurred while downloading chapter {chapter}: {failure.value}\n")
+        yield from request_next_chapter(self)
