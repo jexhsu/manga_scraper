@@ -9,7 +9,7 @@ class spy_x_familySpider(BaseMangaSpider):
     chapter_list_selector = '#ceo_latest_comics_widget-3 ul li a::attr(href)'
     chapter_pattern = r'chapter-(.+?)/'
     start_url="https://w2.spyxfamilyseason.com"
-    start_chapter = 99
+    start_chapter = 95
 
     url_template = "https://w2.spyxfamilyseason.com/manga/spy-x-family-chapter-{chapter}/"
     image_selector = "img"

@@ -7,6 +7,9 @@ import sys
 import logging
 import re
 
+
+# TODO 无法合并的章节，文件夹命名添加 "-xxx" 例如： chapter-96-xxx chapter-95-xxx
+
 # Disable Scrapy's default logs
 logging.getLogger('scrapy').setLevel(logging.WARNING)
 
@@ -80,6 +83,8 @@ class BaseMangaSpider(scrapy.Spider):
             # If start_chapter is not found, reset to the first chapter
             print(f"⚠️ start_chapter {self.start_chapter} not found, resetting to index 0")
             self.chapter_index = 0
+        
+
         
         if self.chapter_list:
             yield scrapy.Request(
