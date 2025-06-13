@@ -10,9 +10,6 @@ from manga_scraper.utils.chapter_downloader import prepare_chapter_download
 from manga_scraper.utils.chapter_requester import request_next_chapter
 from manga_scraper.utils.chapter_display import print_chapter_summary
 
-# TODO: For chapters that cannot be merged into a complete volume, append a suffix "-xxx" to the directory name.
-#       Example: chapter-96-xxx, chapter-95-xxx
-
 # Suppress default Scrapy logging output to reduce verbosity
 logging.getLogger('scrapy').setLevel(logging.WARNING)
 
@@ -33,7 +30,6 @@ class BaseMangaSpider(scrapy.Spider):
 
     # Image-related configuration
     image_selector = "img.page-image"  # CSS selector for image elements
-    image_attr = "src"  # Attribute containing the image URL
     file_ext = ".jpg"  # Default image file extension
     root_dir = "downloads"  # Root directory for storing downloaded content
 
@@ -105,7 +101,7 @@ class BaseMangaSpider(scrapy.Spider):
     def parse_chapter(self, response):
         """Parse a chapter page and initiate download of all images within the chapter"""
         chapter = response.meta['chapter']
-        img_urls = response.css(f"{self.image_selector}::attr({self.image_attr})").getall()
+        img_urls = response.css(f"{self.image_selector}::attr(src)").getall()
 
         # Determine whether to skip the chapter and prepare relevant metadata
         skip, folder, meta = prepare_chapter_download(

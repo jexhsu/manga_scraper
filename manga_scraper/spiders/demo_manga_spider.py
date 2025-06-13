@@ -1,6 +1,6 @@
 from .base_spider import BaseMangaSpider
 
-class demo_manga_nameSpider(BaseMangaSpider):
+class DemoMangaSpider(BaseMangaSpider):
     """
     Spider class to scrape manga chapters and images from 'Demo Manga' website.
     Inherits from BaseMangaSpider for common functionality.
@@ -32,10 +32,7 @@ class demo_manga_nameSpider(BaseMangaSpider):
     
     # CSS selector to extract image URLs from chapter page
     image_selector = "div.manga-page img"
-    
-    # Attribute containing the image URL
-    image_attr = "src"
-    
+
     # List of allowed domain names for the image host
     image_host_filters = allowed_domains
     
