@@ -102,5 +102,22 @@ CONCURRENT_REQUESTS = 8
 # 限速（可选防封）
 DOWNLOAD_DELAY = 0.5
 
+# ✅ Logging and console settings
+LOG_LEVEL = "ERROR"
+TELNETCONSOLE_ENABLED = False
 
-LOG_LEVEL = 'INFO'
+# ✅ Playwright integration settings
+DOWNLOAD_HANDLERS = {
+    "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+    "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+}
+
+TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
+
+PLAYWRIGHT_BROWSER_TYPE = "chromium"
+PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 60 * 10000 * 5 # 5 mins
+PLAYWRIGHT_LAUNCH_OPTIONS = {
+    "headless": True
+}
+CONCURRENT_REQUESTS: "1"
+DOWNLOAD_DELAY: "1"

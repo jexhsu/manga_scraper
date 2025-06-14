@@ -30,7 +30,7 @@ class AjinSpider(BaseMangaSpider):
     start_url = "https://w9.ajinmanga.online"
     
     # Starting index to control which chapter to begin scraping from
-    start_chapter = 0
+    start_chapter = 2
 
     # Template to build chapter URLs dynamically
     url_template = "https://w9.ajinmanga.online/manga/ajin-chapter-{chapter}/"

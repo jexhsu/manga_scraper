@@ -2,6 +2,7 @@ import scrapy
 import logging
 from manga_scraper.utils.pdf_converter import convert_chapter_to_pdf
 from manga_scraper.utils.progress_bar import ProgressBar
+from scrapy_playwright.page import PageMethod
 from manga_scraper.utils.paginator import ChapterPaginator
 from manga_scraper.utils.chapter_sorter import ChapterSorter
 from manga_scraper.utils.chapter_index import ChapterIndexResolver
@@ -41,11 +42,7 @@ class BaseMangaSpider(scrapy.Spider):
     # Download progress bar instance
     progress_bar = ProgressBar()
 
-    # Custom spider-specific Scrapy settings
-    custom_settings = {
-        'LOG_LEVEL': 'ERROR',
-        'TELNETCONSOLE_ENABLED': False
-    }
+    use_playwright = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -88,20 +85,42 @@ class BaseMangaSpider(scrapy.Spider):
         print(f"📍 Starting download from chapter {self.start_chapter} at index {self.chapter_index}")
         
         if self.chapter_list:
-            # Initiate download for the first chapter in the resolved list
+            chapter_url = self.url_template.format(chapter=self.chapter_list[self.chapter_index])
+            meta = {
+                'chapter': self.chapter_list[self.chapter_index]
+            }
+
+            if self.use_playwright:
+                meta.update({
+                    "playwright": True,
+                    "playwright_page_methods": [
+                        PageMethod("wait_for_selector", self.image_selector),
+                        PageMethod("wait_for_timeout", 1000),
+                    ],
+                    "playwright_page_goto_kwargs": {"wait_until": "domcontentloaded"},
+                    "playwright_include_page": True,
+                })
             yield scrapy.Request(
-                url=self.url_template.format(chapter=self.chapter_list[self.chapter_index]),
+                url=chapter_url,
                 callback=self.parse_chapter,
-                meta={'chapter': self.chapter_list[self.chapter_index]},
+                meta=meta,
                 errback=self.handle_error
             )
+
         else:
             print("⚠️ No chapters found")
 
-    def parse_chapter(self, response):
+    async def parse_chapter(self, response):
         """Parse a chapter page and initiate download of all images within the chapter"""
         chapter = response.meta['chapter']
-        img_urls = response.css(f"{self.image_selector}::attr(src)").getall()
+
+        if "playwright_page" in response.meta:
+            page = response.meta["playwright_page"]
+            await page.wait_for_selector(self.image_selector)
+            img_elements = await page.query_selector_all(self.image_selector)
+            img_urls = [await el.get_attribute("src") for el in img_elements]
+        else:
+            img_urls = response.css(f"{self.image_selector}::attr(src)").getall()
 
         # Determine whether to skip the chapter and prepare relevant metadata
         skip, folder, meta = prepare_chapter_download(
@@ -115,17 +134,34 @@ class BaseMangaSpider(scrapy.Spider):
 
         if skip:
             # Skip this chapter and proceed to the next one
-            yield from request_next_chapter(self)
+            for req in request_next_chapter(self):
+                yield req
             return
-
-        # Start downloading the first image of the chapter
-        yield scrapy.Request(
-            url=img_urls[0],
-            callback=self.download_image,
-            errback=self.handle_error,
-            meta=meta,
-            dont_filter=True
-        )
+        
+        if "playwright_page" in response.meta:
+            for index, img_url in enumerate(img_urls):
+                    if await download_and_save_image(page, img_url, index, folder, self.file_ext,self.use_playwright):
+                        progress_text = f"⏳ Chapter {chapter}: {self.progress_bar.progress_bar(index + 1, len(img_urls))} ({index + 1}/{len(img_urls)}) "
+                        self.progress_bar.update_progress(progress_text)
+                    else:
+                        for req in request_next_chapter(self, response):
+                            yield req
+                        return
+            # Once all images are downloaded, convert the folder to PDF
+            self.progress_bar.clear_progress()
+            logging.info(f"✅ Chapter {chapter}: Download completed!")
+            convert_chapter_to_pdf(folder)
+            for req in request_next_chapter(self, response):
+                yield req
+        else:
+            # Start downloading the first image of the chapter
+            yield scrapy.Request(
+                url=img_urls[0],
+                callback=self.download_image,
+                errback=self.handle_error,
+                meta=meta,
+                dont_filter=True
+            )
 
     def download_image(self, response):
         """Download a single image and continue downloading remaining images recursively"""
@@ -136,7 +172,7 @@ class BaseMangaSpider(scrapy.Spider):
         total = response.meta['total']
         downloaded = response.meta['downloaded'] + 1
 
-        if not download_and_save_image(response, img_urls, index, folder, self.file_ext):
+        if not download_and_save_image(response, img_urls, index, folder, self.file_ext, self.use_playwright):
             # If download fails, proceed to the next chapter
             yield from request_next_chapter(self)
             return
@@ -146,21 +182,21 @@ class BaseMangaSpider(scrapy.Spider):
         self.progress_bar.update_progress(progress_text)
 
         if index + 1 < total:
-            # Continue downloading the next image
-            yield scrapy.Request(
-                url=img_urls[index + 1],
-                callback=self.download_image,
-                errback=self.handle_error,
-                meta={
-                    'chapter': chapter,
-                    'img_urls': img_urls,
-                    'index': index + 1,
-                    'folder': folder,
-                    'total': total,
-                    'downloaded': downloaded
-                },
-                dont_filter=True
-            )
+                # Continue downloading the next image
+                yield scrapy.Request(
+                    url=img_urls[index + 1],
+                    callback=self.download_image,
+                    errback=self.handle_error,
+                    meta={
+                        'chapter': chapter,
+                        'img_urls': img_urls,
+                        'index': index + 1,
+                        'folder': folder,
+                        'total': total,
+                        'downloaded': downloaded
+                    },
+                    dont_filter=True
+                )
         else:
             # Once all images are downloaded, convert the folder to PDF
             self.progress_bar.clear_progress()

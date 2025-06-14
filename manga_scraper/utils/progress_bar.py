@@ -72,8 +72,7 @@ class ProgressBar:
         """More efficient progress update."""
         if text != self.last_progress:
             # Clear only what we need to
-            sys.stdout.write("\r" + " " * self.last_progress_length + "\r")
-            sys.stdout.write(text)
+            sys.stdout.write("\r" + text + " " * max(0, self.last_progress_length - len(text)))
             sys.stdout.flush()
             self.last_progress = text
             self.last_progress_length = len(text)
