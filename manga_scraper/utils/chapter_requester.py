@@ -2,16 +2,27 @@ import scrapy
 import logging
 from scrapy_playwright.page import PageMethod
 
-def request_next_chapter(spider, response=None):
+from manga_scraper.utils.chapter_downloader import prepare_chapter_download
+
+def request_next_chapter(spider, chapter_list_or_map):
     """
     Issue a Scrapy request for the next chapter.
     """
+    chapters = list(chapter_list_or_map.values()) if isinstance(chapter_list_or_map, dict) else chapter_list_or_map
+    
     spider.chapter_index += 1
 
-    if spider.chapter_index < len(spider.chapter_list):
-        next_chapter = spider.chapter_list[spider.chapter_index]
+    if spider.chapter_index < len(chapters):
+        next_chapter = chapters[spider.chapter_index]
 
-        meta = {'chapter': next_chapter}
+        if spider.use_playwright:
+            result = prepare_chapter_download(spider.root_dir, spider.site_name, spider.chapter_index, use_playwright=True)
+            skip = result[0]
+            if skip:
+                for req in request_next_chapter(spider, spider.chapter_map):
+                    yield req
+
+        meta = {'chapter': list(chapter_list_or_map.keys())[spider.chapter_index] if isinstance(chapter_list_or_map, dict) else chapters[spider.chapter_index]}
 
         if getattr(spider, 'use_playwright', False):
             meta.update({

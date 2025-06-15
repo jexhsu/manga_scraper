@@ -23,9 +23,11 @@ class MangaParkTestSpider(BaseMangaSpider):
     
     # URL to start scraping from
     start_url = "https://mangapark.io/title/76065-en-bocchi-the-rock"
+
+    anti_scraping_url = True
     
     # Starting chapter index for scraping
-    start_chapter = 2
+    start_chapter = 1
 
     # Template for constructing chapter URLs
     url_template = "https://mangapark.io/title/76065-en-bocchi-the-rock/{chapter}/"

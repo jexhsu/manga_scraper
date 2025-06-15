@@ -1,19 +1,22 @@
-def print_chapter_summary(chapter_list, preview_count=5, max_full_display=20):
+def print_chapter_summary(collection, preview_count=5, max_full_display=20):
     """
-    Print a concise summary of the chapter list to avoid flooding the console,
-    especially when the chapter count is large.
-    
-    Args:
-        chapter_list (list): List of unique chapters (usually strings or numbers).
-        preview_count (int): Number of chapters to show at start and end if truncated.
-        max_full_display (int): Maximum number of chapters to print fully.
-    """
-    total = len(chapter_list)
-    print(f"📚 Found {total} unique chapters")
+    Prints a compact chapter list summary, truncating large outputs.
+    For dictionaries, uses only keys for display.
 
-    if total > max_full_display:
-        print(f"📚 First {preview_count} chapters: {chapter_list[:preview_count]}")
-        print(f"📚 Last {preview_count} chapters: {chapter_list[-preview_count:]}")
-        print(f"📚 Total chapters: {total}. Use pagination or filtering to view all chapters.")
+    Args:
+        collection (Union[list, dict]): Chapters to summarize.
+            Dictionaries will display keys only.
+        preview_count (int): Chapters to show at start/end when truncated.
+        max_full_display (int): Maximum chapters to display fully.
+    """
+    chapters = list(collection.keys()) if isinstance(collection, dict) else collection
+    total = len(chapters)
+    
+    print(f"📚 Found {total} chapters")
+
+    if total <= max_full_display:
+        print(f"📚 Chapter list: {chapters}")
     else:
-        print(f"📚 Unique chapter list: {chapter_list}")
+        print(f"📚 First {preview_count} chapters: {chapters[:preview_count]}")
+        print(f"📚 Last {preview_count} chapters: {chapters[-preview_count:]}")
+        print(f"📚 Total chapters: {total} (display truncated)")

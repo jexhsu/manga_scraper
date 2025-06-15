@@ -7,9 +7,26 @@ def create_download_folder(root_dir, site_name, chapter):
     os.makedirs(folder, exist_ok=True)
     return folder
 
-def check_existing_downloads(folder, file_ext):
-    """Check if there are any existing downloads for the chapter."""
-    return len([f for f in os.listdir(folder) if f.endswith(file_ext)])
+def check_all_images_exist(folder, img_urls, file_ext):
+    total = len(img_urls)
+    missing_files = []
+    downloaded_count = 0
+
+    for index in range(total):
+        ext = os.path.splitext(img_urls[index])[1].split('?')[0].lower() or file_ext
+        filename = f"{index + 1:03d}{ext}"
+        path = os.path.join(folder, filename)
+        if os.path.exists(path):
+            downloaded_count += 1
+        else:
+            missing_files.append(filename)
+
+    all_exist = (downloaded_count == total)
+    return {
+        'all_exist': all_exist,
+        'downloaded_count': downloaded_count,
+    }
+
 
 def remove_folder(folder):
     """Remove the folder if it exists."""
