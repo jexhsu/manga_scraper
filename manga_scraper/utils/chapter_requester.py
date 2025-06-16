@@ -1,7 +1,6 @@
 import scrapy
 import logging
 from scrapy_playwright.page import PageMethod
-
 from manga_scraper.utils.chapter_downloader import prepare_chapter_download
 
 def request_next_chapter(spider, chapter_list_or_map):
@@ -22,7 +21,7 @@ def request_next_chapter(spider, chapter_list_or_map):
                 for req in request_next_chapter(spider, spider.chapter_map):
                     yield req
 
-        meta = {'chapter': list(chapter_list_or_map.keys())[spider.chapter_index] if isinstance(chapter_list_or_map, dict) else chapters[spider.chapter_index]}
+        meta = {'chapter': spider.chapter_index}
 
         if getattr(spider, 'use_playwright', False):
             meta.update({

@@ -171,7 +171,9 @@ class BaseMangaSpider(scrapy.Spider):
             return
         
         if "playwright_page" in response.meta:
-            for index, img_url in enumerate(img_urls):
+            start_index = meta.get("index", 0) or 0
+            for index in range(start_index, len(img_urls)):
+                    img_url = img_urls[index]
                     if await download_and_save_image(page, img_url, index, folder, self.file_ext,self.use_playwright):
                         progress_text = f"⏳ Chapter {chapter}: {self.progress_bar.progress_bar(index + 1, len(img_urls))} ({index + 1}/{len(img_urls)}) "
                         self.progress_bar.update_progress(progress_text)
