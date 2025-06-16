@@ -7,13 +7,13 @@ def create_download_folder(root_dir, site_name, chapter):
     os.makedirs(folder, exist_ok=True)
     return folder
 
-def check_all_images_exist(folder, img_urls, file_ext):
+def check_all_images_exist(folder, img_urls):
     total = len(img_urls)
     missing_files = []
     downloaded_count = 0
 
     for index in range(total):
-        ext = os.path.splitext(img_urls[index])[1].split('?')[0].lower() or file_ext
+        ext = os.path.splitext(img_urls[index])[1].split('?')[0].lower() 
         filename = f"{index + 1:03d}{ext}"
         path = os.path.join(folder, filename)
         if os.path.exists(path):
@@ -32,4 +32,4 @@ def remove_folder(folder):
     """Remove the folder if it exists."""
     if os.path.exists(folder):
         shutil.rmtree(folder)
-        print(f"🗑️ Removed folder: {folder}\n")
+        print(f"🗑️ Removed folder: {folder}")
