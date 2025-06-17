@@ -22,6 +22,7 @@ class BaseMangaParkSpider(BaseMangaSpider):
     image_selector = "div[data-name='image-show'] img"
 
     def __init__(self, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
         # Construct URL patterns based on manga ID
         self.chapter_pattern = rf"{self.manga_id}/(.+)"
