@@ -3,8 +3,7 @@ import re
 
 def print_chapter_completion_map(chapter_completed_map):
     """
-    Pretty-prints the chapter completion status in a compact, color-coded block format.
-    Adjusts items per line based on terminal width.
+    Prints chapter status as: number[✓] with compact alignment, number left, status right.
     """
     if not chapter_completed_map:
         print("No chapter completion data available.")
@@ -15,27 +14,30 @@ def print_chapter_completion_map(chapter_completed_map):
     RESET = "\033[0m"
 
     def chapter_sort_key(item):
-        chapter_key = str(item[0])
-        match = re.search(r'\d+', chapter_key)
-        return (int(match.group()) if match else float('inf'), chapter_key.lower())
+        key_str = str(item[0])
+        match = re.search(r'\d+', key_str)
+        return (int(match.group()) if match else float('inf'), key_str.lower())
 
     sorted_items = sorted(chapter_completed_map.items(), key=chapter_sort_key)
 
-    max_key_length = max(len(str(key)) for key, _ in sorted_items)
-    sample_entry = f"[{GREEN}✓{RESET}] {'ch'+str('9'*max_key_length)}"
-    sample_width = len(sample_entry) + 3  # 3 spaces between items
+    max_ch_len = max(len(str(ch)) for ch, _ in sorted_items)
+    block_width = max_ch_len + 3  # number + [✓] or [×]
+    spacing = 4  # space between blocks
+    total_block = block_width + spacing
+
     term_width = shutil.get_terminal_size((80, 20)).columns
-    items_per_line = max(1, term_width // sample_width)
+    blocks_per_line = max(1, term_width // total_block)
 
-    print("\n📊 Chapter Completion Status:")
+    print("\n📘 Chapter Completion:")
+
     line = []
+    for idx, (chapter, done) in enumerate(sorted_items, 1):
+        symbol = "✓" if done else "×"
+        color = GREEN if done else RED
+        # Format: right-align number, status immediately after
+        block = f"{color}{str(chapter):>{max_ch_len}}[{symbol}]{RESET}"
+        line.append(block)
 
-    for i, (chapter, completed) in enumerate(sorted_items, 1):
-        color = GREEN if completed else RED
-        status = "✅" if completed else "❌"
-        entry = f"[{color}{status}{RESET}] {str(chapter):>{max_key_length}}"
-        line.append(entry)
-
-        if i % items_per_line == 0 or i == len(sorted_items):
-            print("   ".join(line))
+        if idx % blocks_per_line == 0 or idx == len(sorted_items):
+            print((" " * spacing).join(line))
             line = []

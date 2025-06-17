@@ -121,10 +121,3 @@ PLAYWRIGHT_LAUNCH_OPTIONS = {
 }
 CONCURRENT_REQUESTS: "1"
 DOWNLOAD_DELAY: "1"
-
-
-# Retry settings
-RETRY_ENABLED = True
-RETRY_TIMES = 10  # Number of retries before giving up
-RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]  # HTTP codes to retry
-DOWNLOAD_RETRY_DELAY = 3  # Delay between retries in seconds

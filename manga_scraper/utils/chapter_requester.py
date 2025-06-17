@@ -2,6 +2,7 @@ import scrapy
 import os
 import logging
 from scrapy_playwright.page import PageMethod
+from manga_scraper.utils.playwright_setup import setup_playwright_meta
 from manga_scraper.utils.file_manager import remove_folder
 
 def request_next_chapter(spider, chapter_source):
@@ -23,15 +24,7 @@ def request_next_chapter(spider, chapter_source):
 
         meta = {'chapter': key}
         if getattr(spider, 'use_playwright', False):
-            meta.update({
-                "playwright": True,
-                "playwright_include_page": True,
-                "playwright_page_goto_kwargs": {"wait_until": "domcontentloaded"},
-                "playwright_page_methods": [
-                    PageMethod("wait_for_selector", spider.image_selector),
-                    PageMethod("wait_for_timeout", 1000),
-                ],
-            })
+            meta = setup_playwright_meta(meta, spider.image_selector)
 
         yield scrapy.Request(
             url=spider.url_template.format(chapter=chapter),

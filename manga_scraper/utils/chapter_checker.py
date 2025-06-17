@@ -1,49 +1,35 @@
 import os
 from typing import List, Dict, Union
 from manga_scraper.utils.file_manager import remove_folder
+from manga_scraper.utils.print_chapter_status_grid import print_chapter_completion_map
 
 def check_chapter_completion_and_get_start_index(root_dir, site_name, chapter_list, spider):
     """
-    Determines which chapters have already been completed (i.e., their corresponding PDFs exist),
-    cleans up their temporary folders if allowed, and returns the index of the first incomplete chapter.
-
-    Behavior:
-    - Iterates over the provided chapter list (could be a list of chapter keys or chapter numbers).
-    - For each chapter:
-        - Checks if the corresponding PDF exists.
-        - If completed and within the first continuous completed block, logs and deletes the folder.
-        - If not completed, marks the index as the starting point for further downloads.
-    - Updates `spider.chapter_completed_map` with chapter completion statuses.
-    - Returns:
-        - The index of the first incomplete chapter.
-        - If all chapters are complete, returns the length of the chapter list.
-    
-    Parameters:
-    - root_dir (str): Root directory where PDFs are stored.
-    - site_name (str): Name of the manga site (used to locate the subfolder).
-    - chapter_list (List[Union[int, str]]): List of chapter identifiers.
-    - spider (object): The spider instance whose `chapter_completed_map` will be updated.
+    Determines which chapters have already been completed and returns the first incomplete chapter index.
+    Updates completion map and prints status before making decisions.
     """
-
     completed_map: Dict[Union[int, str], bool] = {}
     pdf_dir = os.path.join(root_dir, site_name)
-
     first_incomplete_index = None
     cleaning_allowed = True  # Only clean folders in the first continuous completed block
 
+    # First pass: Check all chapter statuses
     for i, key in enumerate(chapter_list):
         pdf_path = os.path.join(pdf_dir, f"chapter-{key}.pdf")
-        is_completed = os.path.isfile(pdf_path)
-        completed_map[key] = is_completed
+        completed_map[key] = os.path.isfile(pdf_path)
 
-        if is_completed and cleaning_allowed:
-            print(f"\n✅ Chapter {key}: This chapter has already been downloaded. Skipping...")
+    # Update spider's completion map and print status
+    spider.chapter_completed_map = completed_map
+    print_chapter_completion_map(completed_map)
+
+    # Second pass: Handle cleaning and find first incomplete
+    for i, key in enumerate(chapter_list):
+        if completed_map[key] and cleaning_allowed:
+            print(f"\n✅ Chapter {key}: Already downloaded. Cleaning temp files...")
             folder = os.path.join(pdf_dir, f"chapter-{key}")
             remove_folder(folder)
-        elif not is_completed and first_incomplete_index is None:
+        elif not completed_map[key] and first_incomplete_index is None:
             first_incomplete_index = i
-            cleaning_allowed = False  # Stop cleaning after the first incomplete chapter
-
-    spider.chapter_completed_map = completed_map
+            cleaning_allowed = False  # Stop cleaning after first gap
 
     return first_incomplete_index if first_incomplete_index is not None else len(chapter_list)

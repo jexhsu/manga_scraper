@@ -15,6 +15,7 @@ class BaseMangaParkSpider(BaseMangaSpider):
     allowed_domains = ['mangapark.io']
     chapter_list_selector = 'div.space-x-1 a::attr(href)'
     anti_scraping_url = True
+    root_dir="downloads/manga_park"
     use_playwright = True
     image_selector = "div[data-name='image-show'] img"
 
@@ -31,23 +32,15 @@ class AnotherMangaSpider(BaseMangaParkSpider):
     Example of another manga spider using the same base configuration.
     Only manga ID and name need to be changed.
     """
-    name = "manga_park_another_manga"  # Unique spider name
+    name = "another_manga"  # Unique spider name
     manga_id = "12345-en-another_manga"  # Different manga ID
-
-class BocchiTheRockSpider(BaseMangaParkSpider):
-    """
-    Spider for scraping 'Bocchi The Rock' manga from MangaPark.
-    Only requires manga ID and starting chapter configuration.
-    """
-    name = "manga_park_bocchi_the_rock"  # Spider identifier
-    manga_id = "76065-en-bocchi-the-rock"  # Unique manga identifier on the site
 
 class AgirlOnTheShoreSpider(BaseMangaParkSpider):
     """
     Example of another manga spider using the same base configuration.
     Only manga ID and name need to be changed.
     """
-    name="manga_park_a_gril_on_the_shore"
+    name="a_gril_on_the_shore"
     manga_id = "29929-en-a-girl-on-the-shore"  # Different manga ID
 
 class GoodNightPunpunSpider(BaseMangaParkSpider):
@@ -55,5 +48,14 @@ class GoodNightPunpunSpider(BaseMangaParkSpider):
     Example of another manga spider using the same base configuration.
     Only manga ID and name need to be changed.
     """
-    name="manga_park_good_night_punpun"
+    name="good_night_punpun"
     manga_id = "18981-en-goodnight-punpun"  # Different manga ID
+
+
+class NeonGenesisEvangelionSpider(BaseMangaParkSpider):
+    """
+    Example of another manga spider using the same base configuration.
+    Only manga ID and name need to be changed.
+    """
+    name="neon_genesis_evangelion"
+    manga_id = "11218-en-neon-genesis-evangelion"  # Different manga ID
