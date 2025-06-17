@@ -19,6 +19,6 @@ async def extract_image_urls(response: Response, spider) -> list:
         page = response.meta["playwright_page"]
         await page.wait_for_selector(spider.image_selector)
         img_elements = await page.query_selector_all(spider.image_selector)
-        return [await el.get_attribute("src") for el in img_elements]
+        return page, [await el.get_attribute("src") for el in img_elements]
     else:
-        return response.css(f"{spider.image_selector}::attr(src)").getall()
+        return None, response.css(f"{spider.image_selector}::attr(src)").getall()

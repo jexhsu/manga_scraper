@@ -1,6 +1,8 @@
+import asyncio
 import sys
 import shutil
 from typing import Optional
+from scrapy.http import Response
 
 class ProgressBar:
     """

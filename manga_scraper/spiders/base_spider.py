@@ -1,20 +1,19 @@
 import re
+import time
 import scrapy
 import logging
 from manga_scraper.utils.pdf_converter import convert_chapter_to_pdf
+from manga_scraper.utils.print_chapter_status_grid import print_chapter_completion_map
 from manga_scraper.utils.progress_bar import ProgressBar
 from manga_scraper.utils.paginator import ChapterPaginator
 from manga_scraper.utils.chapter_downloader import prepare_chapter_download
 from manga_scraper.utils.chapter_requester import request_next_chapter
 from manga_scraper.utils.chapter_display import print_chapter_summary
 from manga_scraper.utils.chapter_checker import check_chapter_completion_and_get_start_index
-from manga_scraper.utils.chapter_url_processor import process_chapter_urls
-from manga_scraper.utils.chapter_list_parser import parse_chapter_list
 from manga_scraper.utils.image_url_extractor import extract_image_urls
-from manga_scraper.utils.url_processor import process_chapter_url
-from manga_scraper.utils.chapter_progress import check_and_log_chapter_progress
 from manga_scraper.utils.download_manager import download_and_save_image
 from manga_scraper.utils.playwright_setup import setup_playwright_meta
+from scrapy.utils.response import response_status_message
 
 # Suppress default Scrapy logging output to reduce verbosity
 logging.getLogger('scrapy').setLevel(logging.WARNING)
@@ -24,7 +23,6 @@ class BaseMangaSpider(scrapy.Spider):
     site_name = "site_name"
     allowed_domains = ["example.com"]
 
-    chapter_list = [""]
     chapter_map = {}
     chapter_completed_map = {}
     chapter_list_selector = 'a.chapter-link::attr(href)'
@@ -45,6 +43,9 @@ class BaseMangaSpider(scrapy.Spider):
     progress_bar = ProgressBar()
     use_playwright = False
 
+    max_retries = 5  # Maximum retry attempts for a chapter
+    current_retry = 0  # Current retry count for the ongoing chapter
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_progress_length = 0
@@ -58,53 +59,88 @@ class BaseMangaSpider(scrapy.Spider):
         yield scrapy.Request(url=self.start_url, callback=self.parse_chapter_list, errback=self.handle_error)
 
     def parse_chapter_list(self, response):
-        """
-        Parse the chapter list from the response, handling pagination and determining 
-        where to start downloading based on completed chapters.
-        
-        Args:
-            response (scrapy.http.Response): The response object from Scrapy.
-        """
-        # Delegate parsing logic to utility function
-        chapter_map, chapter_list, chapter_index, next_page = parse_chapter_list(response, self)
-        
-        # Handle pagination
-        if next_page:
-            yield scrapy.Request(url=next_page, callback=self.parse_chapter_list)
-            return
-        
-        # Update spider state with parsed data
-        self.chapter_map, self.chapter_list, self.chapter_index = chapter_map, chapter_list, chapter_index
-
-        # Extract progress logging to utility
-        should_continue = check_and_log_chapter_progress(self.chapter_index, self.chapter_list, self.chapter_map)
-        if not should_continue:
-            return
-
-        # Extract chapter URL processing logic to utils
-        chapter_url, meta = process_chapter_url(self, self.chapter_map, self.chapter_list, self.chapter_index)
-
-        if self.use_playwright:
-            result = prepare_chapter_download(self.root_dir, self.site_name, meta['chapter'], use_playwright=True)
-            skip = result[0]
-            if skip:
-                for req in request_next_chapter(self, self.chapter_map):
-                    yield req
-
-        if self.use_playwright:
-           meta = setup_playwright_meta(meta, self.image_selector)
+        """Extract the full list of chapters from the manga main page"""
+        if self.paginate:
+            # If pagination is enabled, recursively fetch all pages
+            self.paginator.extract_chapters(response)
+            if self.paginator.has_more_pages:
+                next_page = self.paginator.next_page_url()
+                yield scrapy.Request(url=next_page, callback=self.parse_chapter_list)
+                return
+            raw_chapters = self.paginator.all_chapters
+        else:
+            # Directly extract chapter identifiers without pagination
+            raw_chapters = response.css(self.chapter_list_selector).re(self.chapter_pattern)
             
-        yield scrapy.Request(
-            url=chapter_url,
-            callback=self.parse_chapter,
-            meta=meta,
-            errback=self.handle_error
+        # Processing raw_chapters into a dictionary with formatted keys
+        descending_chapter_map = {}
+        pattern = re.compile(r'(?:ch|chapter)-0*(\d+(?:-\d+)*)', re.IGNORECASE)
+
+        for raw in raw_chapters:
+            match = pattern.search(raw)
+            if match:
+                chapter_key = f"{match.group(1)}"
+            else:
+                chapter_key = raw  
+            descending_chapter_map[chapter_key] = raw
+        
+        ascending_chapter_map = {k: v for k, v in sorted(descending_chapter_map.items(), key=lambda item: int(re.search(r'\d+', item[0]).group()))}
+
+        self.chapter_map = ascending_chapter_map
+
+        print_chapter_summary(self.chapter_map)
+
+        self.chapter_index = check_chapter_completion_and_get_start_index(
+            self.root_dir,
+            self.site_name,
+            self.chapter_map,
+            self
         )
+
+        print_chapter_completion_map(self.chapter_completed_map)
+
+        start_chapter = list(self.chapter_map.keys())[self.chapter_index]
+
+        print(f"\n📍 Starting download from chapter {start_chapter}")
+
+        # breakpoint()
+
+        if self.chapter_index >= len(self.chapter_map):
+            print("🎉 All chapters already completed. Nothing to download.")
+            return
+        
+        if self.chapter_map:
+            chapter_map_key = list(self.chapter_map.keys())[self.chapter_index] 
+            chapter_map_val=list(self.chapter_map.values())[self.chapter_index]
+            if self.use_playwright:
+                result = prepare_chapter_download(self.root_dir, self.site_name, chapter_map_key, use_playwright=self.use_playwright)
+                skip = result[0]
+                if skip:
+                    for req in request_next_chapter(self, self.chapter_map):
+                        yield req
+
+            chapter_url = self.url_template.format(chapter=chapter_map_val)
+
+            meta = {
+                'chapter': chapter_map_key
+            }
+            
+            if self.use_playwright:
+                meta = setup_playwright_meta(meta, self.image_selector)
+            yield scrapy.Request(
+                url=chapter_url,
+                callback=self.parse_chapter,
+                meta=meta,
+                errback=self.handle_error_with_retry
+            )
+
+        else:
+            print("⚠️ No chapters found")
 
     async def parse_chapter(self, response):
         chapter = response.meta['chapter']
 
-        img_urls = await extract_image_urls(response, self)
+        page, img_urls = await extract_image_urls(response, self)
 
         skip, folder, meta = prepare_chapter_download(
             root_dir=self.root_dir,
@@ -116,7 +152,7 @@ class BaseMangaSpider(scrapy.Spider):
 
         if skip:
             # Skip this chapter and proceed to the next one
-            for req in request_next_chapter(self, self.chapter_map if self.chapter_map else self.chapter_list):
+            for req in request_next_chapter(self, self.chapter_map):
                 yield req
             return
 
@@ -158,7 +194,7 @@ class BaseMangaSpider(scrapy.Spider):
         
         if not download_and_save_image(response, img_urls, index, folder, self.use_playwright):
             # If download fails, proceed to the next chapter
-            yield from request_next_chapter(self, self.chapter_list) 
+            yield from request_next_chapter(self, self.chapter_map) 
             return
 
         # Update the download progress bar in the terminal
@@ -188,7 +224,7 @@ class BaseMangaSpider(scrapy.Spider):
             logging.info(f"✅ Chapter {chapter}: Download completed!")
             self.chapter_completed_map[chapter] = True
             convert_chapter_to_pdf(folder)
-            yield from request_next_chapter(self, self.chapter_list)
+            yield from request_next_chapter(self, self.chapter_map)
 
 
     def handle_error_with_retry(self, failure):
@@ -212,4 +248,4 @@ class BaseMangaSpider(scrapy.Spider):
     def handle_error(self, failure):
         chapter = failure.request.meta.get('chapter', 'unknown')
         logging.error(f"❌ Error occurred while downloading chapter {chapter}: {failure.value}\n")
-        yield from request_next_chapter(self, self.chapter_map if self.chapter_map else self.chapter_list)
+        yield from request_next_chapter(self, self.chapter_map)
