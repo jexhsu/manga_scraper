@@ -1,3 +1,4 @@
+# manga_scraper/utils/chapter_requester.py
 import scrapy
 import os
 import logging

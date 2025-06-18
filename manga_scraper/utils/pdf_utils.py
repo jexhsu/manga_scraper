@@ -1,4 +1,4 @@
-# utils/pdf_utils.py
+# manga_scraper/utils/pdf_utils.py
 
 import os
 import logging

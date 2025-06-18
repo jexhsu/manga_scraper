@@ -1,3 +1,4 @@
+# manga_scraper/spiders/spider_factory.py
 from .base_spider import BaseMangaSpider
 
 

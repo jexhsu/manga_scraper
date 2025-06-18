@@ -1,3 +1,4 @@
+# manga_scraper/utils/file_manager.py
 import os
 import shutil
 import logging

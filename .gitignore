@@ -37,3 +37,6 @@ downloads
 /todo.*
 
 *_test.*
+
+/.png
+/manga_park_search_cache.json

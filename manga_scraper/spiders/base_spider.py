@@ -1,3 +1,4 @@
+# manga_scraper/spiders/base_spider.py
 import os
 import re
 import scrapy
@@ -16,9 +17,6 @@ from manga_scraper.utils.chapter_checker import (
 from manga_scraper.utils.image_url_extractor import extract_image_urls
 from manga_scraper.utils.download_manager import download_and_save_image
 from manga_scraper.utils.playwright_setup import setup_playwright_meta
-
-# Suppress default Scrapy logging output to reduce verbosity
-logging.getLogger("scrapy").setLevel(logging.WARNING)
 
 
 class BaseMangaSpider(scrapy.Spider):
@@ -91,47 +89,66 @@ class BaseMangaSpider(scrapy.Spider):
             )
             logging.debug("Extracted raw chapters (non-paginated): %s", raw_chapters)
 
-        # Processing raw_chapters into a dictionary with formatted keys
+        # Pattern to match chapter numbers (highest priority)
+        chapter_pattern = re.compile(
+            r"(?:ch|chapter)[-_]0*(\d+(?:-\d+)*)", re.IGNORECASE
+        )
+        # Pattern to extract just the content after volume number
+        volume_content_pattern = re.compile(r"vol(?:ume)?[-_]\d+-(.+)$", re.IGNORECASE)
+
         descending_chapter_map = {}
-        pattern = re.compile(r"(?:ch|chapter)-0*(\d+(?:-\d+)*)", re.IGNORECASE)
 
         for raw in raw_chapters:
-            match = pattern.search(raw)
-            if match:
-                chapter_key = f"{match.group(1)}"
+            # First try to find chapter number
+            chapter_match = chapter_pattern.search(raw)
+            if chapter_match:
+                chapter_key = chapter_match.group(1)
             else:
-                chapter_key = raw
+                # If no chapter number, try to get just the volume content
+                content_match = volume_content_pattern.search(raw)
+                if content_match:
+                    chapter_key = content_match.group(1)  # Just the content part
+                else:
+                    # Fallback to raw string
+                    chapter_key = raw
+
             descending_chapter_map[chapter_key] = raw
 
+        # Safe sorting that handles both numeric and non-numeric keys
+        def sort_key(item):
+            # Try to extract a number from the key
+            num_match = re.search(r"\d+", item[0])
+            if num_match:
+                return int(num_match.group())
+            # For non-numeric keys (like volume content), put them at the end
+            return float("inf")
+
         ascending_chapter_map = {
-            k: v
-            for k, v in sorted(
-                descending_chapter_map.items(),
-                key=lambda item: int(re.search(r"\d+", item[0]).group()),
-            )
+            k: v for k, v in sorted(descending_chapter_map.items(), key=sort_key)
         }
 
         self.chapter_map = ascending_chapter_map
         logging.debug("Processed chapter map: %s", self.chapter_map)
-
-        print_chapter_summary(self.chapter_map)
 
         self.chapter_index = check_chapter_completion_and_get_start_index(
             self.root_dir, self.site_name, self.chapter_map, self
         )
         logging.debug("Chapter index to start from: %s", self.chapter_index)
 
+        print_chapter_summary(self.chapter_map, self.chapter_completed_map)
+
         print_chapter_completion_map(self.chapter_completed_map)
-
-        start_chapter = list(self.chapter_map.keys())[self.chapter_index]
-        logging.debug("Starting download from chapter: %s", start_chapter)
-
-        print(f"\n📍 Starting download from chapter {start_chapter}")
 
         if self.chapter_index >= len(self.chapter_map):
             logging.debug("All chapters already completed")
-            print("🎉 All chapters already completed. Nothing to download.")
+            print("\n🎉 All chapters already completed. Nothing to download.")
             return
+
+        start_chapter = list(self.chapter_map.keys())[self.chapter_index]
+
+        logging.debug("Starting download from chapter: %s", start_chapter)
+
+        print(f"\n📍 Starting download from chapter {start_chapter}")
 
         if self.chapter_map:
             chapter_map_key = list(self.chapter_map.keys())[self.chapter_index]

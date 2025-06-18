@@ -1,3 +1,4 @@
+# manga_scraper/utils/playwright_setup.py
 from scrapy_playwright.page import PageMethod
 
 

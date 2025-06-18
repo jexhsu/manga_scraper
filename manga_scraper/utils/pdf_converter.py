@@ -1,5 +1,4 @@
-# pdf_converter.py
-
+# manga_scraper/utils/pdf_converter.py
 import os
 from PIL import Image
 import img2pdf

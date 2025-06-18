@@ -1,4 +1,4 @@
-import asyncio
+# manga_scraper/utils/image_url_extractor.py
 import logging
 from scrapy.http import Response
 

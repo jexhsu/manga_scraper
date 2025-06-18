@@ -1,8 +1,7 @@
-import os
-from typing import Dict, List, Union
+# manga_scraper/utils/chapter_checker.py
+from typing import Dict, Union
 from pathlib import Path
 from manga_scraper.utils.file_manager import remove_folder
-from manga_scraper.utils.print_chapter_status_grid import print_chapter_completion_map
 import logging
 
 

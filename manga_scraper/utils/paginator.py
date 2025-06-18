@@ -1,4 +1,4 @@
-import re
+# manga_scraper/utils/paginator.py
 import logging
 
 

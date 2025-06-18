@@ -1,3 +1,4 @@
+# manga_scraper/utils/progress_bar.py
 import sys
 import shutil
 

@@ -1,5 +1,7 @@
+# manga_scraper/utils/download_manager.py
 import os
 import logging
+
 
 def download_and_save_image(response, img_urls, index, folder, use_playwright=False):
     """Download and save the image based on the flag."""
@@ -7,6 +9,7 @@ def download_and_save_image(response, img_urls, index, folder, use_playwright=Fa
         return download_and_save_image_async(response, img_urls, index, folder)
     else:
         return download_and_save_image_sync(response, img_urls, index, folder)
+
 
 def download_and_save_image_sync(response, img_urls, index, folder):
     """Synchronously download and save the image."""
@@ -27,6 +30,7 @@ def download_and_save_image_sync(response, img_urls, index, folder):
         logging.debug(f"❌ Error saving image {filename}: {e}")
         return False
 
+
 async def download_and_save_image_async(page, img_url, index, folder):
     """
     Asynchronously download and save an image using Playwright's browser context.
@@ -34,7 +38,9 @@ async def download_and_save_image_async(page, img_url, index, folder):
     try:
         img_response = await page.request.get(img_url)
         if img_response.status != 200:
-            logging.debug(f"❌ Error downloading image {img_url}, status: {img_response.status}")
+            logging.debug(
+                f"❌ Error downloading image {img_url}, status: {img_response.status}"
+            )
             return False
 
         content = await img_response.body()
