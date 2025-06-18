@@ -209,7 +209,7 @@ class BaseMangaSpider(scrapy.Spider):
             self.progress_bar.clear_progress()
             logging.info(f"✅ Chapter {chapter}: Download completed!")
             logging.debug("Converting chapter %s to PDF", chapter)
-            convert_chapter_to_pdf(folder)
+            convert_chapter_to_pdf(self, chapter, folder)
             self.chapter_completed_map[chapter] = os.path.exists(
                 get_pdf_output_path(folder)
             )
@@ -272,7 +272,7 @@ class BaseMangaSpider(scrapy.Spider):
             self.progress_bar.clear_progress()
             logging.info(f"✅ Chapter {chapter}: Download completed!")
             logging.debug("Converting chapter %s to PDF", chapter)
-            convert_chapter_to_pdf(folder)
+            convert_chapter_to_pdf(self, chapter, folder)
             self.chapter_completed_map[chapter] = os.path.exists(
                 get_pdf_output_path(folder)
             )

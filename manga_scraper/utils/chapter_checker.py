@@ -1,14 +1,14 @@
 from typing import Dict, Union
 from pathlib import Path
-from manga_scraper.utils.file_manager import remove_folder
 import logging
+import shutil
 
 
 def check_chapter_completion(
     root_dir: str, site_name: str, chapter_map: Dict[Union[int, str], str]
 ) -> Dict[Union[int, str], bool]:
     """
-    Check completion status for all chapters.
+    Check completion status for all chapters and clean up failed folders.
 
     Args:
         root_dir: Base download directory
@@ -23,23 +23,43 @@ def check_chapter_completion(
 
     completed_map: Dict[Union[int, str], bool] = {}
     pdf_dir = Path(root_dir) / site_name
+    raw_dir = pdf_dir / "raw"  # Assuming raw chapters are stored here
 
-    # Ensure PDF directory exists
+    # Ensure directories exist
     pdf_dir.mkdir(parents=True, exist_ok=True)
-    logger.debug("PDF directory: %s", pdf_dir)
+    if not raw_dir.exists():
+        raw_dir.mkdir()
+
+    logger.debug("PDF directory: %s | Raw directory: %s", pdf_dir, raw_dir)
 
     # Check completion status for all chapters
     logger.debug("Checking completion status for %d chapters", len(chapter_map))
-    for key in chapter_map.keys():
+    for key, chapter_id in chapter_map.items():
         pdf_path = pdf_dir / f"chapter-{key}.pdf"
-        completed_map[key] = pdf_path.exists()
+        chapter_folder = raw_dir / str(chapter_id)  # Original folder
+        failed_folder = raw_dir / f"{chapter_id}-xxx"  # Marked as failed
 
-        logger.debug(
-            "Chapter %s status: %s (Path: %s)",
-            key,
-            "Complete" if completed_map[key] else "Incomplete",
-            pdf_path,
-        )
+        # Case 1: PDF exists → Completed
+        if pdf_path.exists():
+            completed_map[key] = True
+            logger.debug("Chapter %s: Complete (PDF exists)", key)
+            continue
 
-    logger.debug("Completed chapter status check with %d entries", len(completed_map))
+        # Case 2: Failed folder exists → Delete it and mark as incomplete
+        if failed_folder.exists():
+            shutil.rmtree(failed_folder)
+            completed_map[key] = False
+            logger.warning("Deleted failed chapter folder: %s", failed_folder)
+            continue
+
+        # Case 3: Original folder exists but no PDF → Incomplete
+        if chapter_folder.exists():
+            completed_map[key] = False
+            logger.debug("Chapter %s: Incomplete (No PDF but folder exists)", key)
+        else:
+            # Case 4: No folder or PDF → Assume not downloaded
+            completed_map[key] = False
+            logger.debug("Chapter %s: Not downloaded", key)
+
+    logger.debug("Completed status check. Results: %s", completed_map)
     return completed_map

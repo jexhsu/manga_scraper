@@ -66,3 +66,8 @@ class AGirlOnTheShoreSpider(BaseMangaParkSpider):
 class NeonGenesisEvangelionSpider(BaseMangaParkSpider):
     name = "neon_genesis_evangelion"
     manga_id = "11218-en-neon-genesis-evangelion"  # Different manga ID
+
+class MyWifeHasNoEmotionSpider(BaseMangaParkSpider):
+    """Spider for my wife has no emotion manga."""
+    name = "my_wife_has_no_emotion"
+    manga_id = "77475-en-my-wife-has-no-emotion"
