@@ -1,6 +1,5 @@
 # manga_scraper/spiders/base_spider.py
 import os
-import re
 import scrapy
 import logging
 from manga_scraper.utils.chapter_cleaner import clean_completed_chapters
@@ -54,6 +53,7 @@ class BaseMangaSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_progress_length = 0
+        self.check_only = kwargs.get("check_only", False)
         self.paginator = ChapterPaginator(
             start_url=self.start_url,
             selector=self.chapter_list_selector,
@@ -98,6 +98,13 @@ class BaseMangaSpider(scrapy.Spider):
         self.chapter_completed_map = check_chapter_completion(
             self.root_dir, self.site_name, self.chapter_map
         )
+
+        # New check-only mode - exit after printing status
+        if self.check_only:
+            import json
+
+            print("COMPLETION_DATA:" + json.dumps(self.chapter_completed_map))
+            return
 
         clean_completed_chapters(
             self.root_dir, self.site_name, self.chapter_completed_map

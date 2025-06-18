@@ -223,7 +223,41 @@ def main():
     if downloaded:
         print("\n🗂️ Cached downloaded mangas found:")
         for i, (name, mid) in enumerate(downloaded.items(), 1):
-            print(f"  {i:02d}. 📥 {name} (ID: {mid})")
+            print(f"\n  {i:02d}. 📥 {name} (ID: {mid})")
+            try:
+                cmd = [
+                    "scrapy",
+                    "crawl",
+                    name.lower().replace(" ", "_"),
+                    "-a",
+                    "check_only=True",
+                ]
+                result = subprocess.run(
+                    cmd, cwd=os.getcwd(), capture_output=True, text=True
+                )
+                if "COMPLETION_DATA:" in result.stdout:
+                    import json
+
+                    completion_data = json.loads(
+                        result.stdout.split("COMPLETION_DATA:")[1].split("\n")[0]
+                    )
+
+                    total_chapters = len(completion_data)
+                    completed_chapters = sum(
+                        1 for completed in completion_data.values() if completed
+                    )
+                    completion_percent = (completed_chapters / total_chapters) * 100
+
+                    print(
+                        f"\n      📊 Completion: {completion_percent:.1f}% ({completed_chapters}/{total_chapters} chapters)"
+                    )
+
+                if result.stderr:
+                    logging.debug(f"Error checking {name}: {result.stderr}")
+
+            except Exception as e:
+                logging.debug(f"Couldn't check completion for {name}: {e}")
+                print(f"    ❌ Failed to check completion status")
 
         if input("\n❓ Download from cached manga(s)? (Y/n): ").strip().lower() != "n":
             while True:
