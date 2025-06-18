@@ -1,3 +1,4 @@
+# script/search_and_download.py
 import os
 import subprocess
 import logging
@@ -238,7 +239,7 @@ def main():
                         downloader.run_spider(mid, name)
 
     # New search
-    if input("\n❓ Search new manga to download? (y/N): ").strip().lower() == "y":
+    if input("\n❓ Search new manga to download? (Y/n): ").strip().lower() in ("", "y"):
         while True:
             query = input("\n🔎 Enter manga title to search (or 'q' to quit): ").strip()
             if query.lower() == "q":
@@ -261,7 +262,10 @@ def main():
                                 selected["manga_id"], selected["title"]
                             )
 
-            if input("\n❓ Search another manga? (y/N): ").strip().lower() != "y":
+            if input("\n❓ Search another manga? (Y/n): ").strip().lower() not in (
+                "",
+                "y",
+            ):
                 break
 
     print("\n👋 Bye!")

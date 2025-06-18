@@ -3,6 +3,9 @@ import os
 import re
 import scrapy
 import logging
+from manga_scraper.utils.chapter_cleaner import clean_completed_chapters
+from manga_scraper.utils.chapter_map import create_chapter_map
+from manga_scraper.utils.chapter_resume import get_start_index
 from manga_scraper.utils.pdf_converter import convert_chapter_to_pdf
 from manga_scraper.utils.pdf_utils import get_pdf_output_path
 from manga_scraper.utils.print_chapter_status_grid import print_chapter_completion_map
@@ -12,11 +15,12 @@ from manga_scraper.utils.chapter_downloader import prepare_chapter_download
 from manga_scraper.utils.chapter_requester import request_next_chapter
 from manga_scraper.utils.chapter_display import print_chapter_summary
 from manga_scraper.utils.chapter_checker import (
-    check_chapter_completion_and_get_start_index,
+    check_chapter_completion,
 )
 from manga_scraper.utils.image_url_extractor import extract_image_urls
 from manga_scraper.utils.download_manager import download_and_save_image
 from manga_scraper.utils.playwright_setup import setup_playwright_meta
+from manga_scraper.utils.raw_chapter_extractor import extract_raw_chapters
 
 
 class BaseMangaSpider(scrapy.Spider):
@@ -69,70 +73,38 @@ class BaseMangaSpider(scrapy.Spider):
         """Extract the full list of chapters from the manga main page"""
         logging.debug("Processing chapter list from URL: %s", response.url)
 
-        if self.paginate:
-            # If pagination is enabled, recursively fetch all pages
-            self.paginator.extract_chapters(response)
-            logging.debug(
-                "Paginator extracted chapters. Has more pages: %s",
-                self.paginator.has_more_pages,
-            )
-            if self.paginator.has_more_pages:
-                next_page = self.paginator.next_page_url()
-                logging.debug("Yielding request for next page: %s", next_page)
-                yield scrapy.Request(url=next_page, callback=self.parse_chapter_list)
-                return
-            raw_chapters = self.paginator.all_chapters
-        else:
-            # Directly extract chapter identifiers without pagination
-            raw_chapters = response.css(self.chapter_list_selector).re(
-                self.chapter_pattern
-            )
-            logging.debug("Extracted raw chapters (non-paginated): %s", raw_chapters)
-
-        # Pattern to match chapter numbers (highest priority)
-        chapter_pattern = re.compile(
-            r"(?:ch|chapter)[-_]0*(\d+(?:-\d+)*)", re.IGNORECASE
+        # Use the utility function to extract raw chapters
+        raw_chapters = extract_raw_chapters(
+            response=response,
+            paginate=self.paginate,
+            paginator=self.paginator if self.paginate else None,
+            chapter_list_selector=(
+                self.chapter_list_selector if not self.paginate else None
+            ),
+            chapter_pattern=self.chapter_pattern if not self.paginate else None,
         )
-        # Pattern to extract just the content after volume number
-        volume_content_pattern = re.compile(r"vol(?:ume)?[-_]\d+-(.+)$", re.IGNORECASE)
 
-        descending_chapter_map = {}
+        # Handle pagination continuation
+        if self.paginate and self.paginator.has_more_pages:
+            next_page = self.paginator.next_page_url()
+            logging.debug("Yielding request for next page: %s", next_page)
+            yield scrapy.Request(url=next_page, callback=self.parse_chapter_list)
+            return
 
-        for raw in raw_chapters:
-            # First try to find chapter number
-            chapter_match = chapter_pattern.search(raw)
-            if chapter_match:
-                chapter_key = chapter_match.group(1)
-            else:
-                # If no chapter number, try to get just the volume content
-                content_match = volume_content_pattern.search(raw)
-                if content_match:
-                    chapter_key = content_match.group(1)  # Just the content part
-                else:
-                    # Fallback to raw string
-                    chapter_key = raw
-
-            descending_chapter_map[chapter_key] = raw
-
-        # Safe sorting that handles both numeric and non-numeric keys
-        def sort_key(item):
-            # Try to extract a number from the key
-            num_match = re.search(r"\d+", item[0])
-            if num_match:
-                return int(num_match.group())
-            # For non-numeric keys (like volume content), put them at the end
-            return float("inf")
-
-        ascending_chapter_map = {
-            k: v for k, v in sorted(descending_chapter_map.items(), key=sort_key)
-        }
-
-        self.chapter_map = ascending_chapter_map
+        # Use the utility function to create the chapter map
+        self.chapter_map = create_chapter_map(raw_chapters)
         logging.debug("Processed chapter map: %s", self.chapter_map)
 
-        self.chapter_index = check_chapter_completion_and_get_start_index(
-            self.root_dir, self.site_name, self.chapter_map, self
+        self.chapter_completed_map = check_chapter_completion(
+            self.root_dir, self.site_name, self.chapter_map
         )
+
+        clean_completed_chapters(
+            self.root_dir, self.site_name, self.chapter_completed_map
+        )
+
+        self.chapter_index = get_start_index(self.chapter_completed_map)
+
         logging.debug("Chapter index to start from: %s", self.chapter_index)
 
         print_chapter_summary(self.chapter_map, self.chapter_completed_map)
