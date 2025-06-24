@@ -19,7 +19,7 @@ ADDONS = {}
 # USER_AGENT = "manga_scraper (+http://www.yourdomain.com)"
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # CONCURRENT_REQUESTS = 32
@@ -53,7 +53,7 @@ ROBOTSTXT_OBEY = True
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#    "manga_scraper.middlewares.manga_scraperDownloaderMiddleware": 543,
+# "manga_scraper.middlewares.manga_scraperDownloaderMiddleware": 543,
 # }
 
 # Enable or disable extensions
@@ -64,11 +64,14 @@ ROBOTSTXT_OBEY = True
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-ITEM_PIPELINES = {
-    "manga_scraper.pipelines.MangaDataCleaningPipeline": 100,
-    "manga_scraper.pipelines.MangaJsonExportPipeline": 200,
-}
+# 图片存储设置
+IMAGES_STORE = "./downloads"
 
+ITEM_PIPELINES = {
+    "manga_scraper.pipelines.data_cleaning.MangaDataCleaningPipeline": 100,
+    # "manga_scraper.pipelines.download_img_2pdf.MangaDownloadPipeline": 200,
+    "manga_scraper.pipelines.data_storage.MangaStoragePipeline": 1000,
+}
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
 # AUTOTHROTTLE_ENABLED = True
@@ -100,6 +103,7 @@ DOWNLOAD_HANDLERS = {
     "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
 }
 
+
 # Playwright settings
 PLAYWRIGHT_BROWSER_TYPE = "chromium"
 PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 600000
@@ -109,3 +113,23 @@ PLAYWRIGHT_LAUNCH_OPTIONS = {
 }
 
 BASE_URL = "https://mangapark.io"
+
+
+# 提高并发请求数
+CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS_PER_DOMAIN = 8
+
+# Playwright专用设置
+PLAYWRIGHT_MAX_PAGES_PER_CONTEXT = 8
+PLAYWRIGHT_MAX_CONTEXTS = 4
+
+
+MEDIA_ALLOW_REDIRECTS = True
+DOWNLOAD_DELAY = 2
+PLAYWRIGHT_ABORT_REQUEST = lambda req: req.resource_type in {
+    "font",
+    "stylesheet",
+    "image",
+}
+
+DATABASE_NAME = "manga_park"

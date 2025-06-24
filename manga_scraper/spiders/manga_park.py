@@ -1,60 +1,52 @@
 # manga_scraper/spiders/manga_park.py
 from urllib.parse import urljoin, quote
-from manga_scraper.items import ChapterItem, MangaItem, PageItem
+from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 import scrapy
-from scrapy_playwright.page import PageMethod
+from manga_scraper.settings import BASE_URL
+from .common.manga_page import parse_manga_page
 
 
 class MangaParkSpider(scrapy.Spider):
     name = "manga_park"
-    allowed_domains = ["mangapark.io"]
+
+    custom_settings = {
+        "DEPTH_LIMIT": 3,
+        "CLOSESPIDER_PAGECOUNT": 100,
+    }
 
     def __init__(self, search_term="attack on titan", **kwargs):
         super().__init__(**kwargs)
         self.search_term = search_term
 
     def start_requests(self):
-        url = f"https://mangapark.io/search?word={quote(self.search_term)}"
-        yield scrapy.Request(url, self.parse_search_page)
+        url = f"{BASE_URL}/search?word={quote(self.search_term)}"
+        yield scrapy.Request(url, callback=self.parse_search_page)
 
     def parse_search_page(self, response):
-        manga = response.css("div.flex.border-b.border-b-base-200.pb-5")[0]
-        manga_url = manga.css("h3 a::attr(href)").get()
-        yield MangaItem(
-            manga_name=manga.css('span[q\\:key="Ts_1"]')
-            .xpath("string(.)")
-            .get()
-            .strip(),
-            manga_url=manga_url,
-        )
-        yield scrapy.Request(urljoin(response.url, manga_url), self.parse_manga_page)
+        manga_list = response.css("div.flex.border-b.border-b-base-200.pb-5")[:1]
 
-    def parse_manga_page(self, response):
-        chapter = response.css("div[data-name='chapter-list'] [q\\:key='8t_8']")[-1]
-        yield ChapterItem(
-            chapter_url=chapter.css("a::attr(href)").get(),
-            chapter_number_name=chapter.css("a::text").get(),
-            chapter_text_name=chapter.css("span[q\\:key='8t_1']::text").get(),
-        )
-        yield scrapy.Request(
-            urljoin(response.url, chapter.css("a::attr(href)").get()),
-            callback=self.parse_chapter_page,
-            meta={
-                "playwright": True,
-                "playwright_page_methods": [
-                    PageMethod(
-                        "wait_for_selector",
-                        "div[data-name='image-item']",
-                        timeout=600000,
-                    )
-                ],
-                "playwright_page_goto_kwargs": {
-                    "wait_until": "domcontentloaded",
-                    "timeout": 600000,
-                },
-            },
-        )
-
-    def parse_chapter_page(self, response):
-        page_urls = response.css("div[data-name='image-item'] img::attr(src)").getall()
-        yield from (PageItem(page_url=url) for url in page_urls)
+        for manga in manga_list:
+            manga_url = manga.css("h3 a::attr(href)").get()
+            manga_id = manga_url.split("/")[-1]
+            manga_follows = (
+                manga.css('div[id^="comic-follow-swap-"] span::text').get(),
+            )
+            yield MangaItem(
+                manga_name=manga.css('span[q\\:key="Ts_1"]')
+                .xpath("string(.)")
+                .get()
+                .strip(),
+                manga_url=manga_url,
+                manga_id=manga_id,
+                manga_follows=manga_follows,
+            )
+            yield SearchKeywordMangaLinkItem(
+                keyword=self.search_term,
+                manga_id=manga_id,
+                total_mangas=len(manga_list),
+            )
+            yield scrapy.Request(
+                urljoin(response.url, manga_url),
+                callback=parse_manga_page,
+                meta={"manga_id": manga_id},
+            )

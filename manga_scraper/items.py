@@ -8,17 +8,36 @@ from enum import Enum
 
 
 class DownloadStatus(Enum):
-    PENDING = "pending"
-    DOWNLOADING = "downloading"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
-class MangaItem(scrapy.Item):
+class BaseItem(scrapy.Item):
+    """Base class for all items that automatically adds item_type"""
+
+    item_type = scrapy.Field()  # Explicitly declare the field
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self["item_type"] = self.__class__.__name__
+
+
+class SearchKeywordMangaLinkItem(BaseItem):
+    keyword = scrapy.Field()
+    manga_id = scrapy.Field()
+    manga_url = scrapy.Field()
+    manga_follows = scrapy.Field()
+    total_mangas = scrapy.Field()
+
+
+class MangaItem(BaseItem):
     # Basic info
+    keyword = scrapy.Field()
     manga_id = scrapy.Field()
     manga_name = scrapy.Field()
     manga_url = scrapy.Field()
+    manga_follows = scrapy.Field()
+    total_chapters = scrapy.Field()
 
     # Download progress
     total_chapters = scrapy.Field()
@@ -26,7 +45,13 @@ class MangaItem(scrapy.Item):
     download_status = scrapy.Field()
 
 
-class ChapterItem(scrapy.Item):
+class MangaChapterLinkItem(BaseItem):
+    manga_id = scrapy.Field()
+    chapter_id = scrapy.Field()
+    total_chapters = scrapy.Field()
+
+
+class ChapterItem(BaseItem):
     # Basic info
     manga_id = scrapy.Field()
     chapter_id = scrapy.Field()
@@ -34,16 +59,24 @@ class ChapterItem(scrapy.Item):
     chapter_text_name = scrapy.Field()
     chapter_name = scrapy.Field()
     chapter_url = scrapy.Field()
+    total_pages = scrapy.Field()
 
     # Download progress
     chapter_number = scrapy.Field()
     total_pages = scrapy.Field()
     downloaded_pages = scrapy.Field()
     download_status = scrapy.Field()
-    download_path = scrapy.Field()
+    pdf_path = scrapy.Field()
 
 
-class PageItem(scrapy.Item):
+class ChapterPageLinkItem(BaseItem):
+    manga_id = scrapy.Field()
+    chapter_id = scrapy.Field()
+    page_id = scrapy.Field()
+    total_pages = scrapy.Field()
+
+
+class PageItem(BaseItem):
     # Basic info
     manga_id = scrapy.Field()
     chapter_id = scrapy.Field()
