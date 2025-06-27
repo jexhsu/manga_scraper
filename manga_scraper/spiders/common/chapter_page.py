@@ -8,7 +8,7 @@ async def parse_chapter_page(response):
     manga_id = response.meta["manga_id"]
     page_urls = response.css("div[data-name='image-item'] img::attr(src)").getall()
 
-    for idx, url in enumerate(page_urls[: randint(1, 3)], start=1):
+    for idx, url in enumerate(page_urls, start=1):
         yield PageItem(
             manga_id=manga_id,
             chapter_id=chapter_id,

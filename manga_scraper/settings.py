@@ -69,7 +69,7 @@ IMAGES_STORE = "./downloads"
 
 ITEM_PIPELINES = {
     "manga_scraper.pipelines.data_cleaning.MangaDataCleaningPipeline": 100,
-    # "manga_scraper.pipelines.download_img_2pdf.MangaDownloadPipeline": 200,
+    "manga_scraper.pipelines.postgres_pipeline.PostgreSQLPipeline": 200,
 }
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -131,4 +131,9 @@ PLAYWRIGHT_ABORT_REQUEST = lambda req: req.resource_type in {
     "image",
 }
 
-DATABASE_NAME = "manga_park"
+# PostgreSQL connection settings
+POSTGRESQL_DB = "manga_db"  # Database name
+POSTGRESQL_USER = "jexhsu"  # Database user
+POSTGRESQL_PASSWORD = "wsdfr_manga_db"  # Database password (empty if no password)
+POSTGRESQL_HOST = "localhost"  # Database host
+POSTGRESQL_PORT = "5432"  # Database port

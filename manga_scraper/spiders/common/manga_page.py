@@ -10,9 +10,7 @@ def parse_manga_page(response):
     manga_id = response.meta["manga_id"]
     chapters = response.css("div[data-name='chapter-list'] [q\\:key='8t_8']")
 
-    chapters_to_process = chapters[-randint(1, 3) :]
-
-    for chapter in chapters_to_process:
+    for chapter in chapters:
         chapter_url = chapter.css("a::attr(href)").get()
         chapter_id = chapter_url.split("/")[-1]
 
