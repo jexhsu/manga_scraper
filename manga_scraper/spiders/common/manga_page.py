@@ -1,18 +1,21 @@
 # manga_scraper/spiders/parse_manga.py
-from urllib.parse import urljoin
-from manga_scraper.items import ChapterItem, MangaChapterLinkItem
-import scrapy
-from scrapy_playwright.page import PageMethod
+from random import randint
+from manga_scraper.items import ChapterItem, MangaChapterLinkItem, MangaItem
+
+from manga_scraper.utils.playwright_config import get_chapter_page_meta
 from .chapter_page import parse_chapter_page
-from manga_scraper.items import MangaItem
 
 
 def parse_manga_page(response):
-    chapters = response.css("div[data-name='chapter-list'] [q\\:key='8t_8']")[-3:]
     manga_id = response.meta["manga_id"]
-    for chapter in chapters:
+    chapters = response.css("div[data-name='chapter-list'] [q\\:key='8t_8']")
+
+    chapters_to_process = chapters[-randint(1, 3) :]
+
+    for chapter in chapters_to_process:
         chapter_url = chapter.css("a::attr(href)").get()
         chapter_id = chapter_url.split("/")[-1]
+
         yield ChapterItem(
             manga_id=manga_id,
             chapter_id=chapter_id,
@@ -20,33 +23,18 @@ def parse_manga_page(response):
             chapter_number_name=chapter.css("a::text").get(),
             chapter_text_name=chapter.css("span[q\\:key='8t_1']::text").get(),
         )
+
         yield MangaChapterLinkItem(
             manga_id=manga_id,
             chapter_id=chapter_id,
             total_chapters=len(chapters),
         )
-        yield scrapy.Request(
-            urljoin(response.url, chapter_url),
+
+        yield response.follow(
+            chapter_url,
             callback=parse_chapter_page,
-            meta={
-                "playwright": True,
-                "playwright_page_methods": [
-                    PageMethod(
-                        "wait_for_selector",
-                        "div[data-name='image-item']",
-                        timeout=600000,
-                    ),
-                    PageMethod(
-                        "evaluate",
-                        "() => { window.stop(); }",
-                    ),
-                ],
-                "playwright_page_goto_kwargs": {
-                    "wait_until": "domcontentloaded",
-                    "timeout": 600000,
-                },
-                "playwright_include_page": True,
-                "manga_id": manga_id,
-                "chapter_id": chapter_id,
-            },
+            meta=get_chapter_page_meta(
+                manga_id=manga_id,
+                chapter_id=chapter_id,
+            ),
         )

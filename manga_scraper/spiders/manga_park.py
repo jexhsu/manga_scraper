@@ -1,5 +1,6 @@
 # manga_scraper/spiders/manga_park.py
-from urllib.parse import urljoin, quote
+from typing import Dict
+from urllib.parse import quote, urljoin
 from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 import scrapy
 from manga_scraper.settings import BASE_URL
@@ -19,7 +20,7 @@ class MangaParkSpider(scrapy.Spider):
         self.search_term = search_term
 
     def start_requests(self):
-        url = f"{BASE_URL}/search?word={quote(self.search_term)}"
+        url = f"{BASE_URL}/search?word={quote(self.search_term)}&sortby=field_follow"
         yield scrapy.Request(url, callback=self.parse_search_page)
 
     def parse_search_page(self, response):
@@ -28,9 +29,7 @@ class MangaParkSpider(scrapy.Spider):
         for manga in manga_list:
             manga_url = manga.css("h3 a::attr(href)").get()
             manga_id = manga_url.split("/")[-1]
-            manga_follows = (
-                manga.css('div[id^="comic-follow-swap-"] span::text').get(),
-            )
+            manga_follows = manga.css('div[id^="comic-follow-swap-"] span::text').get()
             yield MangaItem(
                 manga_name=manga.css('span[q\\:key="Ts_1"]')
                 .xpath("string(.)")

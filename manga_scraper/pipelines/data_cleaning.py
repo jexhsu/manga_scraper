@@ -31,6 +31,11 @@ class MangaDataCleaningPipeline:
         """Clean and process manga data."""
         item["manga_name"] = item["manga_name"].strip()
         item["manga_url"] = self._get_full_url(item["manga_url"])
+        for field in [
+            "manga_follows",
+        ]:
+            if field in item:
+                item[field] = self._convert_numeric_string(item[field])
         return item
 
     def _clean_chapter_data(self, item):
@@ -46,6 +51,30 @@ class MangaDataCleaningPipeline:
     def _get_full_url(self, relative_url):
         """Convert relative URL to absolute URL and clean it."""
         return urljoin(BASE_URL, relative_url).partition("?")[0]
+
+    def _convert_numeric_string(self, value):
+        """Convert string with K/M suffixes to integer."""
+        if isinstance(value, (int, float)):
+            return int(value)
+
+        value = str(value).strip().upper()
+        if not value:
+            return 0
+
+        multiplier = 1
+        if "K" in value:
+            multiplier = 1000
+            value = value.replace("K", "")
+        elif "M" in value:
+            multiplier = 1000000
+            value = value.replace("M", "")
+
+        try:
+            # Handle decimal points
+            numeric_value = float(value) * multiplier
+            return int(numeric_value)
+        except (ValueError, TypeError):
+            return 0
 
     def _generate_chapter_name(self, item):
         """Combine chapter number and text to create full chapter name."""

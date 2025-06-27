@@ -25,8 +25,6 @@ class BaseItem(scrapy.Item):
 class SearchKeywordMangaLinkItem(BaseItem):
     keyword = scrapy.Field()
     manga_id = scrapy.Field()
-    manga_url = scrapy.Field()
-    manga_follows = scrapy.Field()
     total_mangas = scrapy.Field()
 
 

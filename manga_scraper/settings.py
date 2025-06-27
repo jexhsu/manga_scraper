@@ -70,7 +70,6 @@ IMAGES_STORE = "./downloads"
 ITEM_PIPELINES = {
     "manga_scraper.pipelines.data_cleaning.MangaDataCleaningPipeline": 100,
     # "manga_scraper.pipelines.download_img_2pdf.MangaDownloadPipeline": 200,
-    "manga_scraper.pipelines.data_storage.MangaStoragePipeline": 1000,
 }
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
