@@ -28,11 +28,10 @@ def parse_manga_page(response):
             total_chapters=len(chapters),
         )
 
-        yield response.follow(
-            chapter_url,
-            callback=parse_chapter_page,
-            meta=get_chapter_page_meta(
-                manga_id=manga_id,
-                chapter_id=chapter_id,
-            ),
-        )
+        # Optionally follow crawling chapters or not
+        if response.meta.get("follow_chapters", True):
+            yield response.follow(
+                chapter_url,
+                callback=parse_chapter_page,
+                meta=get_chapter_page_meta(manga_id=manga_id, chapter_id=chapter_id),
+            )
