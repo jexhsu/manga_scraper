@@ -137,3 +137,18 @@ POSTGRESQL_USER = "jexhsu"  # Database user
 POSTGRESQL_PASSWORD = "wsdfr_manga_db"  # Database password (empty if no password)
 POSTGRESQL_HOST = "localhost"  # Database host
 POSTGRESQL_PORT = "5432"  # Database port
+
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY", "jexhsu")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+SETUP_ADMIN_TOKEN = os.getenv("SETUP_ADMIN_TOKEN")
+DEBUG_SETUP = DEBUG_SETUP = os.getenv("DEBUG_SETUP", "false").lower() in ("true")
+
+
+VERSION = "v1"

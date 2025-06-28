@@ -1,7 +1,48 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey
+import uuid
+from sqlalchemy import (
+    UUID,
+    Boolean,
+    Column,
+    DateTime,
+    String,
+    Integer,
+    Float,
+    ForeignKey,
+    Text,
+    func,
+)
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )  # UUID primary key with default uuid4
+    username = Column(String, unique=True, nullable=False)  # Ensure username is unique
+    password = Column(String, nullable=False)  # Hashed password
+    is_admin = Column(Boolean, default=False)  # Only admins can register
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    task_id = Column(String, primary_key=True, index=True)  # Unique task UUID
+    cmd = Column(Text, nullable=False)  # Command line used to start task
+    status = Column(
+        String, nullable=False, default="running"
+    )  # running, finished, terminated, failed
+    start_time = Column(
+        DateTime(timezone=True), server_default=func.now()
+    )  # Start timestamp
+    end_time = Column(
+        DateTime(timezone=True), nullable=True
+    )  # End timestamp (nullable until finished)
+    pid = Column(Integer, nullable=True)  # Process ID of running task (optional)
+    is_admin_only = Column(Boolean, default=True)  # Only admins can manage this task
 
 
 class Manga(Base):
