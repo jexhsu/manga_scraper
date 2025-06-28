@@ -3,24 +3,39 @@ from typing import Dict
 from urllib.parse import quote, urljoin
 from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 import scrapy
-from manga_scraper.settings import BASE_URL
+from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
 from .common.manga_page import parse_manga_page
 
 
 class MangaParkSpider(scrapy.Spider):
     name = "manga_park"
+    base_url = "https://mangapark.io"
 
     custom_settings = {
         "DEPTH_LIMIT": 3,
         "CLOSESPIDER_PAGECOUNT": 100,
     }
 
-    def __init__(self, search_term="attack on titan", **kwargs):
+    manga_parser_config = MangaParserConfig.create_site_config(
+        chapters_selector="div[data-name='chapter-list'] [q\\:key='8t_8']",
+        chapter_id_extractor=lambda url: url.split("/")[-1],
+        chapter_number_extractor=lambda el: el.css("a::text").get(),
+        chapter_text_extractor=lambda el: el.css("span[q\\:key='8t_1']::text").get(),
+        use_playwright_meta=True,
+        chapter_parser_config=ChapterParserConfig.create_site_config(
+            page_urls_selector="div[data-name='image-item'] img::attr(src)",
+            async_cleanup=True,
+        ),
+    )
+
+    def __init__(self, search_term="a girl on the shore", **kwargs):
         super().__init__(**kwargs)
         self.search_term = search_term
 
     def start_requests(self):
-        url = f"{BASE_URL}/search?word={quote(self.search_term)}&sortby=field_follow"
+        url = (
+            f"{self.base_url}/search?word={quote(self.search_term)}&sortby=field_follow"
+        )
         yield scrapy.Request(url, callback=self.parse_search_page)
 
     def parse_search_page(self, response):
@@ -47,5 +62,8 @@ class MangaParkSpider(scrapy.Spider):
             yield scrapy.Request(
                 urljoin(response.url, manga_url),
                 callback=parse_manga_page,
-                meta={"manga_id": manga_id},
+                meta={
+                    "manga_id": manga_id,
+                    "spider": self,
+                },
             )

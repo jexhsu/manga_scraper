@@ -6,7 +6,6 @@ import img2pdf
 import scrapy
 
 from manga_scraper.items import ChapterPageLinkItem, PageItem
-from manga_scraper.settings import BASE_URL
 from scrapy.pipelines.images import ImagesPipeline
 
 
@@ -34,7 +33,6 @@ class MangaDownloadPipeline(ImagesPipeline):
                     "chapter_id": item["chapter_id"],
                     "page_number": item["page_number"],
                 },
-                headers={"Referer": BASE_URL},
             )
 
     def file_path(self, request, response=None, info=None, *, item=None):

@@ -1,14 +1,23 @@
 # manga_scraper/spiders/parse_chapter.py
-from random import randint, random
 from manga_scraper.items import ChapterPageLinkItem, PageItem
 
 
 async def parse_chapter_page(response):
+    """
+    Parse chapter page using configuration from spider instance in response meta
+    Args:
+        response: Scrapy response object with spider instance in meta
+    """
+    spider = response.meta.get("spider")
     chapter_id = response.meta["chapter_id"]
     manga_id = response.meta["manga_id"]
-    page_urls = response.css("div[data-name='image-item'] img::attr(src)").getall()
 
-    for idx, url in enumerate(page_urls[: randint(1, 3)], start=1):
+    # Get config from spider's manga parser config
+    config = spider.manga_parser_config["chapter_parser_config"]
+
+    page_urls = response.css(config["page_urls_selector"]).getall()
+
+    for idx, url in enumerate(page_urls[:2], start=1):
         yield PageItem(
             manga_id=manga_id,
             chapter_id=chapter_id,
@@ -23,5 +32,5 @@ async def parse_chapter_page(response):
             total_pages=len(page_urls),
         )
 
-    if "playwright_page" in response.meta:
+    if config.get("async_cleanup", False) and "playwright_page" in response.meta:
         await response.meta["playwright_page"].close()

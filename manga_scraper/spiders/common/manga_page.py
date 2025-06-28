@@ -1,40 +1,51 @@
-# manga_scraper/spiders/parse_manga.py
-from random import randint
-from manga_scraper.items import ChapterItem, MangaChapterLinkItem, MangaItem
-
+from manga_scraper.spiders.common.chapter_page import parse_chapter_page
 from manga_scraper.utils.playwright_config import get_chapter_page_meta
-from .chapter_page import parse_chapter_page
 
 
-def parse_manga_page(response):
+def parse_manga_page(response, selector=None):
+    """
+    Parse manga listing page to extract chapter links and metadata.
+
+    Args:
+        response (scrapy.http.Response): The Scrapy response object.
+        selector (scrapy.Selector, optional): Custom selector (e.g., from Playwright page content).
+            If None, defaults to response.css.
+
+    Yields:
+        dict: Chapter metadata.
+        scrapy.Request: Request to parse the chapter page.
+    """
     manga_id = response.meta["manga_id"]
-    chapters = response.css("div[data-name='chapter-list'] [q\\:key='8t_8']")
+    spider = response.meta.get("spider")
 
-    chapters_to_process = chapters[-randint(1, 3) :]
+    site_config = spider.manga_parser_config
 
-    for chapter in chapters_to_process:
+    sel = selector or response
+    chapters = sel.css(site_config["chapters_selector"])
+
+    for chapter in chapters[-1:]:
         chapter_url = chapter.css("a::attr(href)").get()
-        chapter_id = chapter_url.split("/")[-1]
+        chapter_id = site_config["chapter_id_extractor"](chapter_url)
 
-        yield ChapterItem(
-            manga_id=manga_id,
-            chapter_id=chapter_id,
-            chapter_url=chapter_url,
-            chapter_number_name=chapter.css("a::text").get(),
-            chapter_text_name=chapter.css("span[q\\:key='8t_1']::text").get(),
-        )
+        yield {
+            "manga_id": manga_id,
+            "chapter_id": chapter_id,
+            "chapter_url": chapter_url,
+            "chapter_number": site_config["chapter_number_extractor"](chapter),
+            "chapter_text": site_config["chapter_text_extractor"](chapter),
+        }
 
-        yield MangaChapterLinkItem(
-            manga_id=manga_id,
-            chapter_id=chapter_id,
-            total_chapters=len(chapters),
-        )
+        meta = {
+            "manga_id": manga_id,
+            "chapter_id": chapter_id,
+            "spider": spider,
+        }
+
+        if site_config.get("use_playwright_meta", False):
+            meta.update(get_chapter_page_meta(manga_id=manga_id, chapter_id=chapter_id))
 
         yield response.follow(
             chapter_url,
             callback=parse_chapter_page,
-            meta=get_chapter_page_meta(
-                manga_id=manga_id,
-                chapter_id=chapter_id,
-            ),
+            meta=meta,
         )

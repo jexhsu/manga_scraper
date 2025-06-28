@@ -64,7 +64,6 @@ ROBOTSTXT_OBEY = False
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-# 图片存储设置
 IMAGES_STORE = "./downloads"
 
 ITEM_PIPELINES = {
@@ -111,14 +110,10 @@ PLAYWRIGHT_LAUNCH_OPTIONS = {
     "timeout": 600000,
 }
 
-BASE_URL = "https://mangapark.io"
 
-
-# 提高并发请求数
 CONCURRENT_REQUESTS = 16
 CONCURRENT_REQUESTS_PER_DOMAIN = 8
 
-# Playwright专用设置
 PLAYWRIGHT_MAX_PAGES_PER_CONTEXT = 8
 PLAYWRIGHT_MAX_CONTEXTS = 4
 

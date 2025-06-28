@@ -8,7 +8,6 @@ from manga_scraper.items import (
     PageItem,
     SearchKeywordMangaLinkItem,
 )
-from manga_scraper.settings import BASE_URL
 
 
 class MangaDataCleaningPipeline:
@@ -27,10 +26,10 @@ class MangaDataCleaningPipeline:
             self._clean_image_data(item)
         return item
 
-    def _clean_manga_data(self, item):
+    def _clean_manga_data(self, item, spider):
         """Clean and process manga data."""
         item["manga_name"] = item["manga_name"].strip()
-        item["manga_url"] = self._get_full_url(item["manga_url"])
+        item["manga_url"] = self._get_full_url(item["manga_url"], spider)
         for field in [
             "manga_follows",
         ]:
@@ -38,19 +37,19 @@ class MangaDataCleaningPipeline:
                 item[field] = self._convert_numeric_string(item[field])
         return item
 
-    def _clean_chapter_data(self, item):
+    def _clean_chapter_data(self, item, spider):
         """Clean and process chapter data."""
         item["chapter_name"] = self._generate_chapter_name(item)
-        item["chapter_url"] = self._get_full_url(item["chapter_url"])
+        item["chapter_url"] = self._get_full_url(item["chapter_url"], spider)
         return item
 
     def _clean_image_data(self, item):
         """Clean and process image data."""
         return item
 
-    def _get_full_url(self, relative_url):
+    def _get_full_url(self, relative_url, spider):
         """Convert relative URL to absolute URL and clean it."""
-        return urljoin(BASE_URL, relative_url).partition("?")[0]
+        return urljoin(spider.base_url, relative_url).partition("?")[0]
 
     def _convert_numeric_string(self, value):
         """Convert string with K/M suffixes to integer."""
