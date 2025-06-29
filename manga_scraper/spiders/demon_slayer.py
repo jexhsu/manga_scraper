@@ -1,11 +1,9 @@
-# manga_scraper/spiders/manga_park.py
+# manga_scraper/spiders/demon_slayer.py
 import re
-from urllib.parse import urljoin
 from scrapy import Spider
 import scrapy
 from scrapy_playwright.page import PageMethod
 from scrapy.http import HtmlResponse
-from manga_scraper.spiders.common.chapter_page import parse_chapter_page
 from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
 

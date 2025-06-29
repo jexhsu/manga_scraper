@@ -1,4 +1,4 @@
-# manga_scraper/spiders/manga_park.py
+# manga_scraper/spiders/ajin.py
 import re
 from scrapy import Spider
 import scrapy

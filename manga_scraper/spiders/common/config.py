@@ -39,8 +39,11 @@ class ChapterParserConfig(ParserConfig):
     """Chapter page parser configuration"""
 
     @staticmethod
-    def create_site_config(page_urls_selector, async_cleanup=False):
+    def create_site_config(
+        page_urls_selector=None, page_urls_extractor=None, async_cleanup=False
+    ):
         return {
             "page_urls_selector": page_urls_selector,
+            "page_urls_extractor": page_urls_extractor,
             "async_cleanup": async_cleanup,
         }

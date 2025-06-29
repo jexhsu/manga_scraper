@@ -1,5 +1,4 @@
 # manga_scraper/spiders/manga_park.py
-from typing import Dict
 from urllib.parse import quote, urljoin
 from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 import scrapy
@@ -60,7 +59,7 @@ class MangaParkSpider(scrapy.Spider):
                 total_mangas=len(manga_list),
             )
             yield scrapy.Request(
-                urljoin(response.url, manga_url),
+                manga_url,
                 callback=parse_manga_page,
                 meta={
                     "manga_id": manga_id,
