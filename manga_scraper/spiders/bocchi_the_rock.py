@@ -18,7 +18,7 @@ class BocchitheRockSpider(Spider):
         ).group(1),
         use_playwright_meta=False,
         chapter_parser_config=ChapterParserConfig.create_site_config(
-            page_urls_selector="div.separator img::attr(src)",
+            page_urls_selector="div.separator img::attr(src), figure.wp-block-image img::attr(src)",
             async_cleanup=False,
         ),
     )

@@ -19,9 +19,9 @@ class MangaDataCleaningPipeline:
         elif isinstance(item, ChapterPageLinkItem):
             return item
         elif isinstance(item, MangaItem):
-            self._clean_manga_data(item)
+            self._clean_manga_data(item, spider)
         elif isinstance(item, ChapterItem):
-            self._clean_chapter_data(item)
+            self._clean_chapter_data(item, spider)
         elif isinstance(item, PageItem):
             self._clean_image_data(item)
         return item

@@ -4,6 +4,7 @@ import os
 from typing import Tuple
 import img2pdf
 import scrapy
+import re
 
 from manga_scraper.items import ChapterPageLinkItem, PageItem
 from scrapy.pipelines.images import ImagesPipeline
@@ -39,7 +40,7 @@ class MangaDownloadPipeline(ImagesPipeline):
         """Return the download path for a manga page."""
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
         clean_manga = self._clean_name(manga_id)
-        clean_chapter = self._clean_name(chapter_id)
+        clean_chapter = self._chapter_name(chapter_id)
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
@@ -66,6 +67,12 @@ class MangaDownloadPipeline(ImagesPipeline):
         """Clean and format manga/chapter identifiers for filesystem use."""
         return id.split("-", 1)[-1] if "-" in id else id
 
+    @staticmethod
+    def _chapter_name(id: str) -> str:
+        """Clean and format chapter identifiers for filesystem use."""
+        match = re.search(r"(chapter-\d+)$", id)
+        return match.group(1) if match else id
+
     def _convert_chapter_to_pdf(self, chapter_key: Tuple[str, str]) -> None:
         """Convert downloaded images for a chapter into a PDF file."""
         chapter_path = self.chapter_paths.get(chapter_key)
@@ -73,11 +80,17 @@ class MangaDownloadPipeline(ImagesPipeline):
             return
 
         # Get all sorted image files
-        image_files = [
-            file
-            for file in os.listdir(chapter_path)
-            if os.path.splitext(file)[1].lower() in {".jpg", ".jpeg", ".png", ".webp"}
-        ]
+        image_files = sorted(
+            [
+                file
+                for file in os.listdir(chapter_path)
+                if os.path.splitext(file)[1].lower()
+                in {".jpg", ".jpeg", ".png", ".webp"}
+            ],
+            key=lambda x: int(
+                "".join(filter(str.isdigit, x))
+            ),  # Extract numbers for sorting
+        )
         if not image_files:
             return
 

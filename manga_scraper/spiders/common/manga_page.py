@@ -1,4 +1,7 @@
+from pprint import pprint
+from manga_scraper.items import ChapterItem, MangaChapterLinkItem
 from manga_scraper.spiders.common.chapter_page import parse_chapter_page
+from manga_scraper.utils.chapter_filter import select_chapters_interactively
 from manga_scraper.utils.playwright_config import get_chapter_page_meta
 
 
@@ -21,19 +24,32 @@ def parse_manga_page(response, selector=None):
     site_config = spider.manga_parser_config
 
     sel = selector or response
-    chapters = sel.css(site_config["chapters_selector"])
+    raw_chapters = sel.css(site_config["chapters_selector"])
 
-    for chapter in chapters[-1:]:
+    filtered_chapters = select_chapters_interactively(
+        raw_chapters,
+        chapter_extractor=site_config["chapter_number_extractor"],
+    )
+
+    for i, chapter in enumerate(filtered_chapters):
         chapter_url = chapter.css("a::attr(href)").get()
         chapter_id = site_config["chapter_id_extractor"](chapter_url)
 
-        yield {
-            "manga_id": manga_id,
-            "chapter_id": chapter_id,
-            "chapter_url": chapter_url,
-            "chapter_number": site_config["chapter_number_extractor"](chapter),
-            "chapter_text": site_config["chapter_text_extractor"](chapter),
-        }
+        priority = -i
+
+        yield ChapterItem(
+            manga_id=manga_id,
+            chapter_id=chapter_id,
+            chapter_url=chapter_url,
+            chapter_number_name=site_config["chapter_number_extractor"](chapter),
+            chapter_text_name=site_config["chapter_text_extractor"](chapter),
+        )
+
+        yield MangaChapterLinkItem(
+            manga_id=manga_id,
+            chapter_id=chapter_id,
+            total_chapters=len(raw_chapters),
+        )
 
         meta = {
             "manga_id": manga_id,
@@ -47,5 +63,6 @@ def parse_manga_page(response, selector=None):
         yield response.follow(
             chapter_url,
             callback=parse_chapter_page,
+            priority=priority,
             meta=meta,
         )

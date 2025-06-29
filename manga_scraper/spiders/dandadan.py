@@ -14,7 +14,7 @@ class AjinSpider(Spider):
         chapters_selector="ul.su-posts li",
         chapter_id_extractor=lambda url: url.split("/")[-2],
         chapter_number_extractor=lambda el: re.search(
-            r"(chapter .+)", el.css("a::text").get(), re.IGNORECASE
+            r"(chapter .+)", el.css("a::text, span::text").get(), re.IGNORECASE
         ).group(1),
         use_playwright_meta=False,
         chapter_parser_config=ChapterParserConfig.create_site_config(

@@ -1,129 +1,150 @@
-# Scrapy settings for manga_scraper project
-#
-# For simplicity, this file contains only settings considered important or
-# commonly used. You can find more settings consulting the documentation:
-#
-#     https://docs.scrapy.org/en/latest/topics/settings.html
-#     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+# -*- coding: utf-8 -*-
 
+# =============================================
+# Basic Scrapy Project Configuration
+# =============================================
+
+# Project name
 BOT_NAME = "manga_scraper"
 
+# Spider modules location
 SPIDER_MODULES = ["manga_scraper.spiders"]
 NEWSPIDER_MODULE = "manga_scraper.spiders"
 
+# Custom addons dictionary
 ADDONS = {}
 
-
-# Crawl responsibly by identifying yourself (and your website) on the user-agent
-# USER_AGENT = "manga_scraper (+http://www.yourdomain.com)"
-
-# Obey robots.txt rules
-ROBOTSTXT_OBEY = False
-
-# Configure maximum concurrent requests performed by Scrapy (default: 16)
-# CONCURRENT_REQUESTS = 32
-
-# Configure a delay for requests for the same website (default: 0)
-# See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
-# See also autothrottle settings and docs
-# DOWNLOAD_DELAY = 3
-# The download delay setting will honor only one of:
-# CONCURRENT_REQUESTS_PER_DOMAIN = 16
-# CONCURRENT_REQUESTS_PER_IP = 16
-
-# Disable cookies (enabled by default)
-# COOKIES_ENABLED = False
-
-# Disable Telnet Console (enabled by default)
-# TELNETCONSOLE_ENABLED = False
-
-# Override the default request headers:
-# DEFAULT_REQUEST_HEADERS = {
-#    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-#    "Accept-Language": "en",
-# }
-
-# Enable or disable spider middlewares
-# See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-# SPIDER_MIDDLEWARES = {
-#    "manga_scraper.middlewares.manga_scraperSpiderMiddleware": 543,
-# }
-
-# Enable or disable downloader middlewares
-# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-# DOWNLOADER_MIDDLEWARES = {
-# "manga_scraper.middlewares.manga_scraperDownloaderMiddleware": 543,
-# }
-
-# Enable or disable extensions
-# See https://docs.scrapy.org/en/latest/topics/extensions.html
-# EXTENSIONS = {
-#    "scrapy.extensions.telnet.TelnetConsole": None,
-# }
-
-# Configure item pipelines
-# See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-IMAGES_STORE = "./downloads"
-
-ITEM_PIPELINES = {
-    "manga_scraper.pipelines.data_cleaning.MangaDataCleaningPipeline": 100,
-    # "manga_scraper.pipelines.download_img_2pdf.MangaDownloadPipeline": 200,
-}
-# Enable and configure the AutoThrottle extension (disabled by default)
-# See https://docs.scrapy.org/en/latest/topics/autothrottle.html
-# AUTOTHROTTLE_ENABLED = True
-# The initial download delay
-# AUTOTHROTTLE_START_DELAY = 5
-# The maximum download delay to be set in case of high latencies
-# AUTOTHROTTLE_MAX_DELAY = 60
-# The average number of requests Scrapy should be sending in parallel to
-# each remote server
-# AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
-# Enable showing throttling stats for every response received:
-# AUTOTHROTTLE_DEBUG = False
-
-# Enable and configure HTTP caching (disabled by default)
-# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-# HTTPCACHE_ENABLED = True
-# HTTPCACHE_EXPIRATION_SECS = 0
-# HTTPCACHE_DIR = "httpcache"
-# HTTPCACHE_IGNORE_HTTP_CODES = []
-# HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
-
-LOG_LEVEL = "DEBUG"
-
-# Set settings whose default value is deprecated to a future-proof value
+# Default encoding for feed exports
 FEED_EXPORT_ENCODING = "utf-8"
 
+# Database configuration
+DATABASE_NAME = "manga_park"
+
+
+# =============================================
+# Crawler Behavior Settings
+# =============================================
+
+# Robots.txt compliance (disabled for scraping)
+ROBOTSTXT_OBEY = False
+
+# Crawling strategy (BFO = Breadth First Order)
+DEPTH_PRIORITY = 1
+SCHEDULER_ORDER = "BFO"
+
+# Logging level (DEBUG for detailed output)
+LOG_LEVEL = "DEBUG"
+
+
+# =============================================
+# Concurrency & Download Settings
+# =============================================
+
+# Global concurrent requests
+CONCURRENT_REQUESTS = 16
+
+# Domain-specific concurrency
+CONCURRENT_REQUESTS_PER_DOMAIN = 5
+
+# Download delay between requests (seconds)
+DOWNLOAD_DELAY = 0
+
+# Media download settings
+MEDIA_ALLOW_REDIRECTS = True
+
+
+# =============================================
+# Playwright Configuration
+# =============================================
+
+# Playwright download handlers
 DOWNLOAD_HANDLERS = {
     "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
     "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
 }
 
-
-# Playwright settings
+# Browser type (chromium, firefox, webkit)
 PLAYWRIGHT_BROWSER_TYPE = "chromium"
+
+# Navigation timeout (milliseconds)
 PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 600000
+
+# Browser launch options
 PLAYWRIGHT_LAUNCH_OPTIONS = {
     "headless": True,
     "timeout": 600000,
 }
 
-
-CONCURRENT_REQUESTS = 16
-CONCURRENT_REQUESTS_PER_DOMAIN = 8
-
+# Resource management
 PLAYWRIGHT_MAX_PAGES_PER_CONTEXT = 8
 PLAYWRIGHT_MAX_CONTEXTS = 4
 
-
-MEDIA_ALLOW_REDIRECTS = True
-DOWNLOAD_DELAY = 2
+# Request filtering (abort certain resource types)
 PLAYWRIGHT_ABORT_REQUEST = lambda req: req.resource_type in {
     "font",
     "stylesheet",
     "image",
 }
 
-DATABASE_NAME = "manga_park"
+
+# =============================================
+# Item Pipelines Configuration
+# =============================================
+
+# Image storage location
+IMAGES_STORE = "./downloads"
+
+# Pipeline execution order
+ITEM_PIPELINES = {
+    "manga_scraper.pipelines.data_cleaning.MangaDataCleaningPipeline": 100,
+    "manga_scraper.pipelines.download_img_2pdf.MangaDownloadPipeline": 200,
+}
+
+
+# =============================================
+# Disabled/Commented Settings (For Reference)
+# =============================================
+
+# User agent configuration
+# USER_AGENT = "manga_scraper (+http://www.yourdomain.com)"
+
+# Cookie handling
+# COOKIES_ENABLED = False
+
+# Telnet console
+# TELNETCONSOLE_ENABLED = False
+
+# Default request headers
+# DEFAULT_REQUEST_HEADERS = {
+#    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+#    "Accept-Language": "en",
+# }
+
+# Spider middlewares
+# SPIDER_MIDDLEWARES = {
+#    "manga_scraper.middlewares.manga_scraperSpiderMiddleware": 543,
+# }
+
+# Downloader middlewares
+# DOWNLOADER_MIDDLEWARES = {
+#    "manga_scraper.middlewares.manga_scraperDownloaderMiddleware": 543,
+# }
+
+# Extensions
+# EXTENSIONS = {
+#    "scrapy.extensions.telnet.TelnetConsole": None,
+# }
+
+# AutoThrottle settings
+# AUTOTHROTTLE_ENABLED = True
+# AUTOTHROTTLE_START_DELAY = 5
+# AUTOTHROTTLE_MAX_DELAY = 60
+# AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+# AUTOTHROTTLE_DEBUG = False
+
+# HTTP caching
+# HTTPCACHE_ENABLED = True
+# HTTPCACHE_EXPIRATION_SECS = 0
+# HTTPCACHE_DIR = "httpcache"
+# HTTPCACHE_IGNORE_HTTP_CODES = []
+# HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
