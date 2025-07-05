@@ -84,7 +84,6 @@ class PageItem(BaseItem):
     chapter_id = scrapy.Field()
     page_id = scrapy.Field()
     page_url = scrapy.Field()
-    headers = scrapy.Field()
 
     # Download progress
     page_number = scrapy.Field()

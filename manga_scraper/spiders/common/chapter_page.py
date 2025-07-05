@@ -10,14 +10,10 @@ def parse_chapter_page(response):
     Args:
         response (scrapy.Response): JSON response from chapter endpoint.
     """
-    spider = response.meta.get("spider")
     manga_id = response.meta["manga_id"]
     manga_name = response.meta["manga_name"]
     chapter_id = response.meta["chapter_id"]
     chapter_number_name = response.meta["chapter_number_name"]
-
-    headers = spider.custom_headers.copy()
-    headers["Referer"] = f"{spider.base_url}/ajax/read/{manga_id}/volume/en"
 
     images = json.loads(response.text).get("result", {}).get("images", [])
     page_urls = [img[0].replace("\\/", "/") for img in images]
@@ -30,7 +26,6 @@ def parse_chapter_page(response):
             chapter_id=chapter_id,
             page_number=idx,
             page_url=url,
-            headers=headers,
         )
 
         yield ChapterPageLinkItem(

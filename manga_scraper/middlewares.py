@@ -3,7 +3,9 @@
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-from urllib.parse import urlparse
+from random import randint
+from urllib.parse import urlencode, urlparse
+import requests
 from scrapy import signals
 
 # useful for handling different item types with a single interface
@@ -99,3 +101,67 @@ class MangaScraperDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+
+class ScrapeOpsFakeUserAgentMiddleware:
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.settings)
+
+    def __init__(self, settings):
+        self.scrapeops_api_key = settings.get("SCRAPE_API_KEY")
+        self.scrapeops_endpoint = settings.get(
+            "SCRAPE_FAKE_USER_AGEN_ENDPOINT",
+            "https://headers.scrapeops.io/v1/browser-headers",
+        )
+        self.scrapeops_fake_user_agents_active = settings.get(
+            "SCRAPEOPS_FAKE_USER_AGENTS_ACTIVE", False
+        )
+        self.scrapeops_num_results = settings.get("SCRAPEOPS_NUM_RESULTS", 1)
+        self.headers_list = []
+        self._get_user_agents_list()
+        self._scrapeops_fake_user_agents_enabled()
+
+    def _get_user_agents_list(self):
+        playload = {
+            "api_key": self.scrapeops_api_key,
+            "count": self.scrapeops_num_results,
+        }
+        playload["num_results"] = self.scrapeops_num_results
+        response = requests.get(self.scrapeops_endpoint, params=urlencode(playload))
+        json_response = response.json()
+        self.headers_list = json_response.get("result", [])
+
+    def _get_random_browser_header(self):
+        return self.headers_list[randint(0, len(self.headers_list) - 1)]
+
+    def _scrapeops_fake_user_agents_enabled(self):
+        if (
+            self.scrapeops_api_key is None
+            or self.scrapeops_api_key == ""
+            or self.scrapeops_api_key.isspace()
+        ):
+            self.scrapeops_fake_user_agents_active = False
+        else:
+            self.scrapeops_fake_user_agents_active = True
+
+    def process_request(self, request, spider):
+        random_browser_header = self._get_random_browser_header()
+
+        for key in [
+            "accept-language",
+            "sec-fetch-user",
+            "sec-fetch-mode",
+            "sec-fetch-site",
+            "sec-ch-ua-platform",
+            "sec-ch-ua-mobile",
+            "sec-ch-ua",
+            "accept",
+            "upgrade-insecure-requests",
+            "user-agent",
+            "referer",
+        ]:
+            value = random_browser_header.get(key)
+            if value:
+                request.headers[key] = value

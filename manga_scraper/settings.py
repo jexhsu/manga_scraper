@@ -107,6 +107,10 @@ ITEM_PIPELINES = {
 
 # User agent configuration
 # USER_AGENT = "manga_scraper (+http://www.yourdomain.com)"
+SCRAPEOPS_API_KEY = "80596a55-10f8-49d7-bc47-6ba0151945cc"
+SCRAPEOPS_FAKE_USER_AGENT_ENDPOINT = "https://headers.scrapeops.io/v1/browser-headers"
+SCRAPEOPS_FAKE_USER_AGENTS_ACTIVE = True
+SCRAPEOPS_NUM_RESULTS = 50
 
 # Cookie handling
 # COOKIES_ENABLED = False
@@ -126,9 +130,10 @@ ITEM_PIPELINES = {
 # }
 
 # Downloader middlewares
-# DOWNLOADER_MIDDLEWARES = {
-#    "manga_scraper.middlewares.manga_scraperDownloaderMiddleware": 543,
-# }
+DOWNLOADER_MIDDLEWARES = {
+    # "manga_scraper.middlewares.manga_scraperDownloaderMiddleware": 543,
+    "manga_scraper.middlewares.ScrapeOpsFakeUserAgentMiddleware": 400,
+}
 
 # Extensions
 # EXTENSIONS = {
