@@ -27,17 +27,18 @@ class MangaDownloadPipeline(ImagesPipeline):
             ]
 
         if isinstance(item, PageItem):
-            # Use headers from the item if available
+            manga_id = item["manga_id"]
             yield scrapy.Request(
                 item["page_url"],
-                headers=item["headers"],
+                headers={
+                    "Referer": f"https://mangafire.to/ajax/read/{manga_id}/volume/en"
+                },
                 meta={
                     "manga_name": item["manga_name"],
-                    "manga_id": item["manga_id"],
+                    "manga_id": manga_id,
                     "chapter_name": item["chapter_name"],
                     "chapter_id": item["chapter_id"],
                     "page_number": item["page_number"],
-                    "dont_redirect": True,  # Prevent redirects
                 },
             )
 
