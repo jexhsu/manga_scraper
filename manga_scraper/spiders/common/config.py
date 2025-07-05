@@ -22,7 +22,7 @@ class MangaParserConfig(ParserConfig):
         chapter_id_extractor,
         chapter_number_extractor,
         chapter_text_extractor=lambda x: "",
-        use_playwright_meta=False,
+        use_playwright=False,
         chapter_parser_config=None,  # Link to corresponding chapter parser config
     ):
         return {
@@ -30,7 +30,7 @@ class MangaParserConfig(ParserConfig):
             "chapter_id_extractor": chapter_id_extractor,
             "chapter_number_extractor": chapter_number_extractor,
             "chapter_text_extractor": chapter_text_extractor,
-            "use_playwright_meta": use_playwright_meta,
+            "use_playwright": use_playwright,
             "chapter_parser_config": chapter_parser_config,
         }
 

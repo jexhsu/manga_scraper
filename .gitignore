@@ -154,3 +154,5 @@ logs/
 /*.json
 /info.md
 /db_data
+
+/test.*

@@ -16,7 +16,7 @@ class TooManyLosingHeroinesSpider(Spider):
         chapter_number_extractor=lambda el: re.search(
             r"(chapter .+)", el.css("a span::text").get(), re.IGNORECASE
         ).group(1),
-        use_playwright_meta=False,
+        use_playwright=False,
         chapter_parser_config=ChapterParserConfig.create_site_config(
             page_urls_selector="div.separator img::attr(data-lazy-src)",
             async_cleanup=False,

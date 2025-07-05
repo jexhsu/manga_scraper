@@ -19,7 +19,7 @@ class DemonSlayerSpider(Spider):
             r"(chapter .+)", el.css("strong::text").get(), re.IGNORECASE
         ).group(1),
         chapter_text_extractor=lambda el: el.css("a.h5::text").get(),
-        use_playwright_meta=False,
+        use_playwright=False,
         chapter_parser_config=ChapterParserConfig.create_site_config(
             page_urls_selector="div img.w-100::attr(src)",
             async_cleanup=False,

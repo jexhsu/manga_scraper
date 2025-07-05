@@ -16,7 +16,7 @@ class KaijuNo8Spider(Spider):
         chapter_number_extractor=lambda el: re.search(
             r"(chapter .+)", el.css("a::text").get(), re.IGNORECASE
         ).group(1),
-        use_playwright_meta=False,
+        use_playwright=False,
         chapter_parser_config=ChapterParserConfig.create_site_config(
             page_urls_selector="div.entry-content div.separator img::attr(src)",
             async_cleanup=False,
