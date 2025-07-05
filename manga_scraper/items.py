@@ -52,6 +52,7 @@ class MangaChapterLinkItem(BaseItem):
 class ChapterItem(BaseItem):
     # Basic info
     manga_id = scrapy.Field()
+    manga_name = scrapy.Field()
     chapter_id = scrapy.Field()
     chapter_number_name = scrapy.Field()
     chapter_text_name = scrapy.Field()
@@ -69,6 +70,7 @@ class ChapterItem(BaseItem):
 
 class ChapterPageLinkItem(BaseItem):
     manga_id = scrapy.Field()
+    manga_name = scrapy.Field()
     chapter_id = scrapy.Field()
     page_id = scrapy.Field()
     total_pages = scrapy.Field()
@@ -76,10 +78,13 @@ class ChapterPageLinkItem(BaseItem):
 
 class PageItem(BaseItem):
     # Basic info
+    manga_name = scrapy.Field()
     manga_id = scrapy.Field()
+    chapter_name = scrapy.Field()
     chapter_id = scrapy.Field()
     page_id = scrapy.Field()
     page_url = scrapy.Field()
+    headers = scrapy.Field()
 
     # Download progress
     page_number = scrapy.Field()

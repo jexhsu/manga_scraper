@@ -20,7 +20,7 @@ class MangaParserConfig(ParserConfig):
     def create_site_config(
         chapters_selector,
         chapter_id_extractor,
-        chapter_number_extractor,
+        chapter_number_extractor=None,
         chapter_text_extractor=lambda x: "",
         use_playwright=False,
         chapter_parser_config=None,  # Link to corresponding chapter parser config

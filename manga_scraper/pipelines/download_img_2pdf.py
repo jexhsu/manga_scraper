@@ -27,20 +27,26 @@ class MangaDownloadPipeline(ImagesPipeline):
             ]
 
         if isinstance(item, PageItem):
+            # Use headers from the item if available
             yield scrapy.Request(
                 item["page_url"],
+                headers=item["headers"],
                 meta={
+                    "manga_name": item["manga_name"],
                     "manga_id": item["manga_id"],
+                    "chapter_name": item["chapter_name"],
                     "chapter_id": item["chapter_id"],
                     "page_number": item["page_number"],
+                    "dont_redirect": True,  # Prevent redirects
                 },
             )
 
     def file_path(self, request, response=None, info=None, *, item=None):
         """Return the download path for a manga page."""
+        manga_name, chapter_name = item["manga_name"], item["chapter_name"]
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
-        clean_manga = self._clean_name(manga_id)
-        clean_chapter = self._chapter_name(chapter_id)
+        clean_manga = self._clean_name(manga_name)
+        clean_chapter = self._chapter_name(chapter_name)
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(

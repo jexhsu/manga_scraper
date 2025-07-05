@@ -1,33 +1,36 @@
-# manga_scraper/spiders/parse_chapter.py
-from manga_scraper.items import ChapterPageLinkItem, PageItem
-from pprint import pprint
+import json
+from manga_scraper.items import PageItem, ChapterPageLinkItem
+from manga_scraper.spiders.common.config import MangaParserConfig
 
 
-async def parse_chapter_page(response):
+def parse_chapter_page(response):
     """
-    Parse chapter page using configuration from spider instance in response meta
+    Parse image URLs from chapter AJAX response (JSON format).
+
     Args:
-        response: Scrapy response object with spider instance in meta
+        response (scrapy.Response): JSON response from chapter endpoint.
     """
     spider = response.meta.get("spider")
-    chapter_id = response.meta["chapter_id"]
     manga_id = response.meta["manga_id"]
+    manga_name = response.meta["manga_name"]
+    chapter_id = response.meta["chapter_id"]
+    chapter_number_name = response.meta["chapter_number_name"]
 
-    # Get config from spider's manga parser config
-    config = spider.manga_parser_config["chapter_parser_config"]
+    headers = spider.custom_headers.copy()
+    headers["Referer"] = f"{spider.base_url}/ajax/read/{manga_id}/volume/en"
 
-    page_urls = (
-        config["page_urls_extractor"](response)
-        if config.get("page_urls_extractor") is not None
-        else response.css(config["page_urls_selector"]).getall()
-    )
+    images = json.loads(response.text).get("result", {}).get("images", [])
+    page_urls = [img[0].replace("\\/", "/") for img in images]
 
     for idx, url in enumerate(page_urls, start=1):
         yield PageItem(
+            manga_name=manga_name,
             manga_id=manga_id,
+            chapter_name=chapter_number_name,
             chapter_id=chapter_id,
             page_number=idx,
             page_url=url,
+            headers=headers,
         )
 
         yield ChapterPageLinkItem(
@@ -36,6 +39,3 @@ async def parse_chapter_page(response):
             page_id=idx,
             total_pages=len(page_urls),
         )
-
-    if config.get("async_cleanup", False) and "playwright_page" in response.meta:
-        await response.meta["playwright_page"].close()

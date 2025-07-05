@@ -1,48 +1,39 @@
 from manga_scraper.items import ChapterItem, MangaChapterLinkItem
+from manga_scraper.spiders.common.config import MangaParserConfig
 from manga_scraper.spiders.common.chapter_page import parse_chapter_page
 from manga_scraper.utils.chapter_filter import select_chapters_interactively
-from manga_scraper.utils.playwright_config import setup_playwright
 
 
-def parse_manga_page(response, selector=None):
+def parse_manga_page(
+    response,
+):
     """
-    Parse manga listing page to extract chapter links and metadata.
+    Parse volume list HTML and yield chapters.
 
     Args:
-        response (scrapy.http.Response): The Scrapy response object.
-        selector (scrapy.Selector, optional): Custom selector (e.g., from Playwright page content).
-            If None, defaults to response.css.
-
-    Yields:
-        dict: Chapter metadata.
-        scrapy.Request: Request to parse the chapter page.
+        response (scrapy.Response): Response containing injected HTML.
     """
+    manga_name = response.meta["manga_name"]
     manga_id = response.meta["manga_id"]
     spider = response.meta.get("spider")
+    config = spider.manga_parser_config
+    raw_chapters = response.css(config["chapters_selector"])
 
-    site_config = spider.manga_parser_config
-
-    page_urls_selector = site_config["chapter_parser_config"]["page_urls_selector"]
-    wait_for = page_urls_selector.rpartition(" ")[0]
-
-    sel = selector or response
-    raw_chapters = sel.css(site_config["chapters_selector"])
-
-    filtered_chapters = select_chapters_interactively(
-        raw_chapters,
-        chapter_extractor=site_config["chapter_number_extractor"],
+    filtered = select_chapters_interactively(
+        raw_chapters, chapter_extractor=config["chapter_number_extractor"]
     )
 
-    for chapter in filtered_chapters:
+    for chapter in filtered:
         chapter_url = chapter.css("a::attr(href)").get()
-        chapter_id = site_config["chapter_id_extractor"](chapter_url)
+        chapter_id = config["chapter_id_extractor"](chapter)
+        chapter_number = config["chapter_number_extractor"](chapter)
 
         yield ChapterItem(
+            manga_name=manga_name,
             manga_id=manga_id,
+            chapter_number_name=chapter_number,
             chapter_id=chapter_id,
             chapter_url=chapter_url,
-            chapter_number_name=site_config["chapter_number_extractor"](chapter),
-            chapter_text_name=site_config["chapter_text_extractor"](chapter),
         )
 
         yield MangaChapterLinkItem(
@@ -51,17 +42,14 @@ def parse_manga_page(response, selector=None):
             total_chapters=len(raw_chapters),
         )
 
-        meta = {
-            "manga_id": manga_id,
-            "chapter_id": chapter_id,
-            "spider": spider,
-        }
-
-        if site_config.get("use_playwright", False):
-            meta.update(setup_playwright(wait_for))
-
         yield response.follow(
-            chapter_url,
+            url=f"{spider.base_url}/ajax/read/volume/{chapter_id}",
             callback=parse_chapter_page,
-            meta=meta,
+            meta={
+                "manga_name": manga_name,
+                "manga_id": manga_id,
+                "chapter_number_name": chapter_number,
+                "chapter_id": chapter_id,
+                "spider": spider,
+            },
         )
