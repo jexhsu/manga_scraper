@@ -1,5 +1,6 @@
 # manga_scraper/spiders/parse_chapter.py
 from manga_scraper.items import ChapterPageLinkItem, PageItem
+from pprint import pprint
 
 
 async def parse_chapter_page(response):

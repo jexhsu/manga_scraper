@@ -16,7 +16,7 @@ class AjinSpider(Spider):
         chapter_number_extractor=lambda el: re.search(
             r"(chapter .+)", el.css("a::text").get(), re.IGNORECASE
         ).group(1),
-        use_playwright_meta=False,
+        use_playwright=False,
         chapter_parser_config=ChapterParserConfig.create_site_config(
             page_urls_extractor=lambda response: [
                 srcset.split(",")[-1].split()[0]

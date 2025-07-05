@@ -20,7 +20,7 @@ class MangaParkSpider(scrapy.Spider):
         chapter_id_extractor=lambda url: url.split("/")[-1],
         chapter_number_extractor=lambda el: el.css("a::text").get(),
         chapter_text_extractor=lambda el: el.css("span[q\\:key='8t_1']::text").get(),
-        use_playwright_meta=True,
+        use_playwright=True,
         chapter_parser_config=ChapterParserConfig.create_site_config(
             page_urls_selector="div[data-name='image-item'] img::attr(src)",
             async_cleanup=True,
@@ -59,7 +59,7 @@ class MangaParkSpider(scrapy.Spider):
                 total_mangas=len(manga_list),
             )
             yield scrapy.Request(
-                manga_url,
+                urljoin(self.base_url, manga_url),
                 callback=parse_manga_page,
                 meta={
                     "manga_id": manga_id,

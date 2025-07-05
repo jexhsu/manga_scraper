@@ -1,8 +1,7 @@
-from pprint import pprint
 from manga_scraper.items import ChapterItem, MangaChapterLinkItem
 from manga_scraper.spiders.common.chapter_page import parse_chapter_page
 from manga_scraper.utils.chapter_filter import select_chapters_interactively
-from manga_scraper.utils.playwright_config import get_chapter_page_meta
+from manga_scraper.utils.playwright_config import setup_playwright
 
 
 def parse_manga_page(response, selector=None):
@@ -23,6 +22,9 @@ def parse_manga_page(response, selector=None):
 
     site_config = spider.manga_parser_config
 
+    page_urls_selector = site_config["chapter_parser_config"]["page_urls_selector"]
+    wait_for = page_urls_selector.rpartition(" ")[0]
+
     sel = selector or response
     raw_chapters = sel.css(site_config["chapters_selector"])
 
@@ -31,11 +33,9 @@ def parse_manga_page(response, selector=None):
         chapter_extractor=site_config["chapter_number_extractor"],
     )
 
-    for i, chapter in enumerate(filtered_chapters):
+    for chapter in filtered_chapters:
         chapter_url = chapter.css("a::attr(href)").get()
         chapter_id = site_config["chapter_id_extractor"](chapter_url)
-
-        priority = -i
 
         yield ChapterItem(
             manga_id=manga_id,
@@ -57,12 +57,11 @@ def parse_manga_page(response, selector=None):
             "spider": spider,
         }
 
-        if site_config.get("use_playwright_meta", False):
-            meta.update(get_chapter_page_meta(manga_id=manga_id, chapter_id=chapter_id))
+        if site_config.get("use_playwright", False):
+            meta.update(setup_playwright(wait_for))
 
         yield response.follow(
             chapter_url,
             callback=parse_chapter_page,
-            priority=priority,
             meta=meta,
         )
