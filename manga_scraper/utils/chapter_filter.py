@@ -135,10 +135,23 @@ def select_chapters_interactively(
                     display_multi_column(filtered_items)
 
             else:
-                num = float(selection)
-                selected = [
-                    ch for ch in chapter_info if abs(ch["number"] - num) < 0.001
-                ]
+                # Try both index selection and chapter number selection
+                try:
+                    # First try as index (1-based)
+                    index = int(selection) - 1
+                    if 0 <= index < len(chapter_info):
+                        selected = [chapter_info[index]]
+                    else:
+                        # Then try as chapter number
+                        num = float(selection)
+                        selected = [
+                            ch for ch in chapter_info 
+                            if abs(ch["number"] - num) < 0.001
+                        ]
+                except ValueError:
+                    print("\n" + " " * content_padding + "[!] Invalid selection")
+                    input(" " * content_padding + "Press Enter to continue...")
+                    continue
 
             if not selected:
                 print("\n" + " " * content_padding + "[!] No chapters matched")
