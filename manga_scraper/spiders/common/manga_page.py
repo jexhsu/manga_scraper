@@ -1,5 +1,5 @@
+# manga_scraper/spiders/common/manga_page.py
 from manga_scraper.items import ChapterItem, MangaChapterLinkItem
-from manga_scraper.spiders.common.config import MangaParserConfig
 from manga_scraper.spiders.common.chapter_page import parse_chapter_page
 from manga_scraper.utils.chapter_filter import select_chapters_interactively
 
@@ -43,7 +43,7 @@ def parse_manga_page(
         )
 
         yield response.follow(
-            url=f"{spider.base_url}/ajax/read/volume/{chapter_id}",
+            url=f"{spider.base_url}/chapters/{chapter_id}/images?is_prev=False&current_page=1&reading_style=long_strip&reading_style=long_strip",
             callback=parse_chapter_page,
             meta={
                 "manga_name": manga_name,

@@ -27,17 +27,17 @@ class MangaDownloadPipeline(ImagesPipeline):
             ]
 
         if isinstance(item, PageItem):
-            manga_id = item["manga_id"]
+            chapter_id = (item["chapter_id"],)
             yield scrapy.Request(
                 item["page_url"],
                 headers={
-                    "Referer": f"https://mangafire.to/ajax/read/{manga_id}/volume/en"
+                    "Referer": f"https://weebcentral.com/chapters/{chapter_id}/images?is_prev=False&current_page=1&reading_style=long_strip&reading_style=long_strip"
                 },
                 meta={
                     "manga_name": item["manga_name"],
-                    "manga_id": manga_id,
+                    "manga_id": item["manga_id"],
                     "chapter_name": item["chapter_name"],
-                    "chapter_id": item["chapter_id"],
+                    "chapter_id": chapter_id,
                     "page_number": item["page_number"],
                 },
             )

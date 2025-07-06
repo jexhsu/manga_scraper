@@ -59,7 +59,7 @@ def select_manga_interactively(
     pad_width = len(str(len(original_list)))  # Determine padding from total count
 
     while True:
-        item_names = [manga_name_extractor(item) for item in current_list]
+        item_names = [manga_name_extractor(item).strip() for item in current_list]
 
         print("\033c", end="")
         if last_search:
