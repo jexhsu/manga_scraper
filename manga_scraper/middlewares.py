@@ -147,6 +147,9 @@ class ScrapeOpsFakeUserAgentMiddleware:
             self.scrapeops_fake_user_agents_active = True
 
     def process_request(self, request, spider):
+        if request.meta.get("skip_fake_ua_middleware"):
+            return
+
         random_browser_header = self._get_random_browser_header()
 
         for key in [

@@ -18,11 +18,10 @@ class MangaParserConfig(ParserConfig):
 
     @staticmethod
     def create_site_config(
-        chapters_selector,
-        chapter_id_extractor,
+        chapters_selector=None,
+        chapter_id_extractor=None,
         chapter_number_extractor=None,
         chapter_text_extractor=lambda x: "",
-        use_playwright=False,
         chapter_parser_config=None,  # Link to corresponding chapter parser config
     ):
         return {
@@ -30,7 +29,6 @@ class MangaParserConfig(ParserConfig):
             "chapter_id_extractor": chapter_id_extractor,
             "chapter_number_extractor": chapter_number_extractor,
             "chapter_text_extractor": chapter_text_extractor,
-            "use_playwright": use_playwright,
             "chapter_parser_config": chapter_parser_config,
         }
 
@@ -39,11 +37,8 @@ class ChapterParserConfig(ParserConfig):
     """Chapter page parser configuration"""
 
     @staticmethod
-    def create_site_config(
-        page_urls_selector=None, page_urls_extractor=None, async_cleanup=False
-    ):
+    def create_site_config(content_key_selector=None, page_urls_extractor=None):
         return {
-            "page_urls_selector": page_urls_selector,
+            "content_key_selector": content_key_selector,
             "page_urls_extractor": page_urls_extractor,
-            "async_cleanup": async_cleanup,
         }
