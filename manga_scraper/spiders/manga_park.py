@@ -4,7 +4,7 @@ from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 import scrapy
 from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
 from .common.manga_page import parse_manga_page
-
+from manga_scraper.utils.search_filter import select_manga_interactively
 
 class MangaParkSpider(scrapy.Spider):
     name = "manga_park"
@@ -38,31 +38,40 @@ class MangaParkSpider(scrapy.Spider):
         yield scrapy.Request(url, callback=self.parse_search_page)
 
     def parse_search_page(self, response):
-        manga_list = response.css("div.flex.border-b.border-b-base-200.pb-5")[:1]
 
-        for manga in manga_list:
-            manga_url = manga.css("h3 a::attr(href)").get()
-            manga_id = manga_url.split("/")[-1]
-            manga_follows = manga.css('div[id^="comic-follow-swap-"] span::text').get()
-            yield MangaItem(
-                manga_name=manga.css('span[q\\:key="Ts_1"]')
+        search_items = response.css("div.flex.border-b.border-b-base-200.pb-5")
+
+        selected = select_manga_interactively(
+            search_items,
+            manga_name_extractor=lambda el: el.css('span[q\\:key="Ts_1"]')
                 .xpath("string(.)")
                 .get()
                 .strip(),
-                manga_url=manga_url,
-                manga_id=manga_id,
-                manga_follows=manga_follows,
-            )
-            yield SearchKeywordMangaLinkItem(
-                keyword=self.search_term,
-                manga_id=manga_id,
-                total_mangas=len(manga_list),
-            )
-            yield scrapy.Request(
-                urljoin(self.base_url, manga_url),
-                callback=parse_manga_page,
-                meta={
-                    "manga_id": manga_id,
-                    "spider": self,
-                },
-            )
+        )
+
+        manga_name = selected.css('span[q\\:key="Ts_1"]').xpath("string(.)").get().strip()
+        manga_url = selected.css("h3 a::attr(href)").get()
+        manga_id = manga_url.split("/")[-1]
+        manga_follows = selected.css('div[id^="comic-follow-swap-"] span::text').get()
+
+        yield MangaItem(
+            manga_name=manga_name,
+            manga_url=manga_url,
+            manga_id=manga_id,
+            manga_follows=manga_follows,
+        )
+
+        yield SearchKeywordMangaLinkItem(
+            keyword=self.search_term,
+            manga_id=manga_id,
+            total_mangas=len(search_items),
+        )
+
+        yield scrapy.Request(
+            urljoin(self.base_url, manga_url),
+            callback=parse_manga_page,
+            meta={
+                "manga_id": manga_id,
+                "spider": self,
+            },
+        )

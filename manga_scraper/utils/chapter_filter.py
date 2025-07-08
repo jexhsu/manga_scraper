@@ -1,155 +1,143 @@
 # manga_scraper/utils/chapter_filter.py
+
 import re
-import shutil
 from typing import List, Any
-from itertools import zip_longest
-
-
-def display_chapters(chapter_names: list[str], title: str = "AVAILABLE CHAPTERS", ascending: bool = True) -> None:
-    """
-    Display chapters with perfectly aligned header and content.
-
-    Args:
-        chapter_names: List of chapter names
-        title: Header title
-        ascending: Sort order (True for ascending)
-    """
-    def natural_sort_key(s):
-        return [
-            float(part) if part.replace(".", "", 1).isdigit() else part.lower()
-            for part in re.split(r"([0-9.]+)", s)
-        ]
-
-    sorted_chapters = sorted(chapter_names, key=natural_sort_key, reverse=not ascending)
-
-    # Get terminal width with reasonable constraints
-    term_width = min(max(shutil.get_terminal_size().columns, 60), 120)
-    
-    # Calculate optimal column layout
-    max_len = max(len(name) for name in sorted_chapters) + 2
-    cols = max(1, min(6, term_width // max_len))
-    content_width = cols * max_len
-    
-    # Ensure header width matches content width
-    display_width = max(len(title) + 4, content_width)
-    display_width = min(display_width, term_width)  # Don't exceed terminal width
-    
-    # Print perfectly aligned header
-    print(f"\n{title.center(display_width)}")
-    print("─" * display_width)
-
-    # Display chapters in perfectly aligned columns
-    for row in zip_longest(*[iter(sorted_chapters)] * cols, fillvalue=""):
-        row_text = " ".join(f"{name:<{max_len}}" for name in row).rstrip()
-        # Pad the row to full display width
-        print(row_text.ljust(display_width))
+from natsort import natsorted
+from .display_utils import display_boxed_title, display_multi_column_items
+from .chapter_utils import extract_chapter_number
 
 
 def select_chapters_interactively(
     raw_chapters: List[Any], chapter_extractor: callable
 ) -> List[Any]:
     """
-    Interactive chapter selection with perfectly aligned display.
+    Interactive chapter selector with natural sorting and reusable display layout.
+
+    Args:
+        raw_chapters: Raw chapter objects
+        chapter_extractor: Callable to extract name from each chapter
+
+    Returns:
+        List of selected raw chapter objects
     """
-    # Extract and sort chapters with error handling
     chapter_info = []
     for ch in raw_chapters:
         try:
-            text = chapter_extractor(ch)
-            num = float(re.search(r"\d+\.?\d*", text).group())
-            chapter_info.append({"element": ch, "name": text, "number": num})
-        except (AttributeError, ValueError):
+            name = chapter_extractor(ch)
+            number = extract_chapter_number(name)
+            chapter_info.append({"element": ch, "name": name, "number": number})
+        except Exception:
             continue
 
     if not chapter_info:
-        print("[ERROR] No chapters found to select from.")
+        print("[×] No chapters available.")
         return []
 
-    while True:
-        # Clear screen and display available chapters
-        print("\033c", end="")  # ANSI escape code to clear screen
-        display_chapters([ch["name"] for ch in chapter_info])
+    # Apply natural sorting: number first, then name
+    chapter_info = natsorted(
+        chapter_info, key=lambda x: (x["number"], x["name"].lower())
+    )
 
-        # Display selection help
-        print("\nSELECTION OPTIONS:")
-        print(" * all       - Select all chapters")
-        print(" * newestN   - Select newest N chapters (e.g. 'newest5')")
-        print(" * x-y       - Select range (e.g. '10-20')")
-        print(" * x,y,z     - Select specific chapters (e.g. '1,3,5')")
-        print(" * .x        - Select decimal chapters (e.g. '.5')")
-        print(" * search:term - Search by name (e.g. 'search:prologue')")
-        
-        # Get user input
-        selection = input("\nEnter selection: ").strip().lower()
+    # Format chapter list with numbering
+    pad_width = len(str(len(chapter_info)))
+    numbered_items = [
+        f"{i + 1:0{pad_width}d}. {item['name']}"
+        for i, item in enumerate(chapter_info)
+    ]
+
+    while True:
+        print("\033c", end="")  # Clear screen
+        term_width = display_boxed_title("CHAPTER SELECTION")
+        display_multi_column_items(numbered_items, term_width)
+
+        print("─" * term_width)
+        print("  SELECTION OPTIONS:")
+        print("  all         - Select all chapters")
+        print("  newestN     - Select newest N (e.g., newest5)")
+        print("  x-y         - Index range (e.g., 10-20)")
+        print("  x,y,z       - Specific indexes (e.g., 1,3,5)")
+        print("  .x          - Select decimal chapters like .5")
+        print("  s:term      - Filter by name keyword")
+        print("  1.0         - Select by exact chapter number")
+        print("  q           - Quit without selecting")
+        print("─" * term_width)
+
+        selection = input("⌨  Enter selection: ").strip().lower()
+
         if not selection:
-            print("\n[ERROR] Please enter a selection")
+            print("[!] Please enter a selection.")
             input("Press Enter to continue...")
             continue
 
+        if selection == "q":
+            return []
+
         try:
-            # Process selection
-            print("\nProcessing your selection...")
-            
+            selected = []
+
             if selection == "all":
-                selected = [ch["element"] for ch in chapter_info]
-                print(f"Selected all {len(selected)} chapters")
+                selected = chapter_info
+
             elif selection.startswith("newest"):
                 n = int(selection[6:])
+                selected = list(reversed(chapter_info[-n:]))
+
+            elif "-" in selection and not re.search(r"[a-z]", selection):
+                start, end = map(int, selection.split("-"))
+                selected = chapter_info[start - 1:end]
+
+            elif "," in selection and not re.search(r"[a-z]", selection):
+                indices = set(int(x) for x in selection.split(","))
                 selected = [
-                    ch["element"]
-                    for ch in sorted(
-                        chapter_info, key=lambda x: x["number"], reverse=True
-                    )[:n]
+                    ch for i, ch in enumerate(chapter_info, start=1) if i in indices
                 ]
-                print(f"Selected newest {n} chapters")
-            elif "-" in selection:
-                start, end = map(float, selection.split("-"))
-                selected = [
-                    ch["element"] for ch in chapter_info if start <= ch["number"] <= end
-                ]
-                print(f"Selected chapters from {start} to {end}")
-            elif "," in selection:
-                selected_numbers = set(map(float, selection.split(",")))
-                selected = [
-                    ch["element"]
-                    for ch in chapter_info
-                    if ch["number"] in selected_numbers
-                ]
-                print(f"Selected specific chapters: {selection}")
+
             elif selection.startswith("."):
-                decimal = float(selection)
+                decimal_part = float("0" + selection)
                 selected = [
-                    ch["element"] for ch in chapter_info if ch["number"] % 1 == decimal
+                    ch
+                    for ch in chapter_info
+                    if not ch["number"].is_integer()
+                    and abs(ch["number"] % 1 - decimal_part) < 0.001
                 ]
-                print(f"Selected decimal chapters: {selection}")
-            elif selection.startswith("search:"):
-                query = selection[7:].lower()
-                selected = [
-                    ch["element"] for ch in chapter_info if query in ch["name"].lower()
-                ]
-                print(f"Found {len(selected)} chapters matching '{query}'")
+
+            elif selection.startswith(("search:", "s:")):
+                query = re.sub(r"^(search:|s:)", "", selection)
+                selected = [ch for ch in chapter_info if query in ch["name"].lower()]
+                if selected:
+                    print("\n")
+                    term_width = display_boxed_title("FILTERED RESULTS")
+                    filtered_items = [
+                        f"{i + 1:0{pad_width}d}. {ch['name']}"
+                        for i, ch in enumerate(selected)
+                    ]
+                    display_multi_column_items(filtered_items, term_width)
+
             else:
                 num = float(selection)
-                selected = [ch["element"] for ch in chapter_info if ch["number"] == num]
-                print(f"Selected chapter {num}")
+                selected = [
+                    ch for ch in chapter_info if abs(ch["number"] - num) < 0.001
+                ]
 
-            # Show selection preview
             if not selected:
-                print("\n[WARNING] No chapters matched your selection.")
-                input("\nPress Enter to continue...")
+                print("[!] No chapters matched.")
+                input("Press Enter to continue...")
                 continue
 
-            print("\nSELECTION PREVIEW:")
-            display_chapters(
-                [chapter_extractor(ch) for ch in selected],
-                title="SELECTED CHAPTERS"
-            )
+            print("\n")
+            term_width = display_boxed_title("SELECTED CHAPTERS")
+            preview_items = [
+                f"{i + 1:0{pad_width}d}. {ch['name']}"
+                for i, ch in enumerate(selected)
+            ]
+            display_multi_column_items(preview_items, term_width)
 
-            # Confirmation
-            confirm = input("\nConfirm selection? [Y/n]: ").strip().lower()
-            if not confirm or confirm == "y":
-                return selected
+            confirm = input("Confirm selection? [Y/n/q] ").strip().lower()
+            if confirm in ("y", ""):
+                return [ch["element"] for ch in selected]
+            elif confirm == "q":
+                return []
 
         except Exception as e:
-            print(f"\n[ERROR] {e}\nPlease try again.")
-            input("\nPress Enter to continue...")
+            print(f"[!] Error: {e}")
+            input("Press Enter to continue...")
