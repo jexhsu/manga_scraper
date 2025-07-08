@@ -8,7 +8,6 @@ import json
 from manga_scraper.utils.decrypt_content_key import decrypt_content_key
 from manga_scraper.utils.js_var_extractor import extract_js_var
 
-
 def parse_manga_page(
     response,
 ):
@@ -50,6 +49,7 @@ def parse_manga_page(
         chapter_id = chapter["id"]
         chapter_number = chapter["name"]
         chapter_url = "/comic/jinjidejuren/chapter/" + chapter_id
+        chapter_type = chapter["type"]
 
         yield ChapterItem(
             manga_name=manga_name,
@@ -74,5 +74,6 @@ def parse_manga_page(
                 "chapter_number_name": chapter_number,
                 "chapter_id": chapter_id,
                 "spider": spider,
+                "chapter_type": chapter_type
             },
         )

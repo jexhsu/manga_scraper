@@ -41,23 +41,31 @@ class MangaDownloadPipeline(ImagesPipeline):
                     "manga_id": item["manga_id"],
                     "chapter_name": item["chapter_name"],
                     "chapter_id": chapter_id,
+                    "chapter_type": item["chapter_type"],
                     "page_number": item["page_number"],
                 },
             )
 
     def file_path(self, request, response=None, info=None, *, item=None):
         """Return the download path for a manga page."""
-        manga_name, chapter_name = item["manga_name"], item["chapter_name"]
+        chapter_type_map = {
+            1: "話",   # Chapters
+            2: "卷",     # Volumes
+            3: "番外",   # Extras
+        }
+        manga_name, chapter_type, chapter_name = item["manga_name"], item["chapter_type"], item["chapter_name"]
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
         clean_manga = self._clean_name(manga_name)
+        chapter_type = chapter_type_map.get(item["chapter_type"], "未知类型")
         clean_chapter = self._chapter_name(chapter_name)
+
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
-            self.store.basedir, clean_manga, clean_chapter
+            self.store.basedir, clean_manga, chapter_type, clean_chapter
         )
 
-        return f"{clean_manga}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
+        return f"{clean_manga}/{chapter_type}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
 
     def _enhance_image_quality(self, image_path: str) -> None:
         """

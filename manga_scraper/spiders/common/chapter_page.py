@@ -18,6 +18,7 @@ def parse_chapter_page(response):
     manga_id = response.meta["manga_id"]
     manga_name = response.meta["manga_name"]
     chapter_id = response.meta["chapter_id"]
+    chapter_type = response.meta['chapter_type']
     chapter_number_name = response.meta["chapter_number_name"]
 
     config = spider.manga_parser_config["chapter_parser_config"]
@@ -35,6 +36,7 @@ def parse_chapter_page(response):
             manga_id=manga_id,
             chapter_name=chapter_number_name,
             chapter_id=chapter_id,
+            chapter_type=chapter_type,
             page_number=idx,
             page_url=url,
         )
