@@ -1,54 +1,44 @@
 # manga_scraper/utils/search_filter.py
 import re
-import shutil
 from typing import List, Any, Optional
-from itertools import zip_longest
 from difflib import get_close_matches
-
+from .display_utils import display_boxed_title, display_multi_column_items, calculate_display_width
 
 def display_results(
     items: List[str],
     title: str = "RESULTS",
-    cols: int = 3,
+    cols: int = None,
     min_width: int = 60,
     max_width: int = 120,
-    pad_width: int = None,  # Auto-calculate if None
+    pad_width: int = None,
+    max_cols: int = 4,
 ) -> None:
-    """
-    Enhanced display function with smart zero-padding
-    """
+    """Display a list of items with boxed title and multi-column layout."""
     if not items:
         return
 
-    # Calculate padding width if not specified
-    if pad_width is None:
-        pad_width = len(str(len(items)))
+    # Determine prefix number width if not provided
+    pad_width = pad_width or len(str(len(items)))
 
-    term_width = min(max(shutil.get_terminal_size().columns, min_width), max_width)
+    # Format each item with numbered prefix
     numbered_items = [f"{i+1:0{pad_width}d}. {name}" for i, name in enumerate(items)]
-    max_len = max(len(item) for item in numbered_items) + 2
-    cols = max(1, min(cols, term_width // max_len))
-    content_width = cols * max_len
-    display_width = max(len(title) + 4, content_width)
-    display_width = min(display_width, term_width)
 
-    # Header with full-width borders
-    print(f"\n╔{'═' * (display_width - 2)}╗")
-    print(f"║{title.center(display_width - 2)}║")
-    print(f"╚{'═' * (display_width - 2)}╝")
+    # Display the boxed title and get terminal width
+    term_width = display_boxed_title(title, min_width, max_width)
 
-    # Multi-column display with consistent padding
-    for row in zip_longest(*[iter(numbered_items)] * cols, fillvalue=""):
-        row_text = " │ ".join(f"{name:<{max_len}}" for name in row).rstrip()
-        print(f" {row_text.ljust(display_width - 2)}")
-
+    # Display items in columns
+    display_multi_column_items(
+        numbered_items,
+        term_width,
+        cols=cols,
+        max_cols=max_cols
+    )
 
 def select_manga_interactively(
-    manga_list: List[Any], manga_name_extractor: callable
+    manga_list: List[Any], 
+    manga_name_extractor: callable
 ) -> Optional[Any]:
-    """
-    Interactive selection with smart zero-padding and consistent styling
-    """
+    """Interactive manga selection with search capabilities."""
     if not manga_list:
         print("[×] No items found.")
         return None
@@ -56,18 +46,19 @@ def select_manga_interactively(
     original_list = manga_list.copy()
     current_list = manga_list
     last_search = None
-    pad_width = len(str(len(original_list)))  # Determine padding from total count
+    pad_width = len(str(len(original_list)))
 
     while True:
         item_names = [manga_name_extractor(item).strip() for item in current_list]
 
-        print("\033c", end="")
+        print("\033c", end="")  # Clear terminal
         if last_search:
             print(f"\n🔍 Filtered results for: '{last_search}'\n")
 
-        # Use calculated pad_width for consistent numbering
-        display_results(item_names, "MANGA SELECTION", cols=2, pad_width=pad_width)
+        # Display list with fixed-width title
+        display_results(item_names, "MANGA SELECTION", cols=None, pad_width=pad_width)
 
+        # Display input help
         help_text = [
             "\nSELECTION OPTIONS:",
             f" • 1-{len(current_list)}       - Select by number",
@@ -112,10 +103,7 @@ def select_manga_interactively(
                 all_names = [manga_name_extractor(item) for item in original_list]
                 similar = get_close_matches(query, all_names, n=5, cutoff=0.3)
                 if similar:
-                    # Use same padding for similar results
-                    display_results(
-                        similar, "SIMILAR TITLES", cols=1, pad_width=pad_width
-                    )
+                    display_results(similar, "SIMILAR TITLES", cols=1, pad_width=pad_width)
                 input("↵ Press Enter to continue...")
                 current_list = original_list.copy()
                 last_search = None

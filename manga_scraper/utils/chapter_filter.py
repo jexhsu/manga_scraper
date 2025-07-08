@@ -1,94 +1,72 @@
+# manga_scraper/utils/chapter_filter.py
+
 import re
-import shutil
 from typing import List, Any
-from itertools import zip_longest
 from natsort import natsorted
+from .display_utils import display_boxed_title, display_multi_column_items
 from .chapter_utils import extract_chapter_number
 
 
 def select_chapters_interactively(
     raw_chapters: List[Any], chapter_extractor: callable
 ) -> List[Any]:
+    """
+    Interactive chapter selector with natural sorting and reusable display layout.
+
+    Args:
+        raw_chapters: Raw chapter objects
+        chapter_extractor: Callable to extract name from each chapter
+
+    Returns:
+        List of selected raw chapter objects
+    """
     chapter_info = []
     for ch in raw_chapters:
         try:
-            text = chapter_extractor(ch)
-            num = extract_chapter_number(text)
-            chapter_info.append(
-                {
-                    "element": ch,
-                    "name": text,
-                    "number": num,
-                }
-            )
-        except (AttributeError, ValueError):
+            name = chapter_extractor(ch)
+            number = extract_chapter_number(name)
+            chapter_info.append({"element": ch, "name": name, "number": number})
+        except Exception:
             continue
 
     if not chapter_info:
         print("[×] No chapters available.")
         return []
 
+    # Apply natural sorting: number first, then name
     chapter_info = natsorted(
         chapter_info, key=lambda x: (x["number"], x["name"].lower())
     )
 
-    term_width = max(shutil.get_terminal_size().columns, 60)
-    content_padding = 4
-    min_col_width = 30
+    # Format chapter list with numbering
     pad_width = len(str(len(chapter_info)))
-
-    def display_multi_column(items):
-        if not items:
-            return
-        max_item_len = max(len(item) for item in items)
-        num_cols = max(1, min(term_width // max(min_col_width, max_item_len + 4), 4))
-        col_width = (term_width - content_padding) // num_cols
-        for row in zip_longest(*[iter(items)] * num_cols, fillvalue=""):
-            row_text = " " * content_padding
-            for item in row:
-                if item:
-                    row_text += item.ljust(col_width)
-            print(row_text.rstrip())
-
-    def format_numbered_list(items, extractor=lambda x: x["name"]):
-        return [
-            f"{i+1:0{pad_width}d}. {extractor(item)}" for i, item in enumerate(items)
-        ]
+    numbered_items = [
+        f"{i + 1:0{pad_width}d}. {item['name']}"
+        for i, item in enumerate(chapter_info)
+    ]
 
     while True:
         print("\033c", end="")  # Clear screen
-
-        print(f"\n╔{'═' * (term_width - 2)}╗")
-        print(f"║{'CHAPTER SELECTION'.center(term_width - 2)}║")
-        print(f"╚{'═' * (term_width - 2)}╝")
-
-        numbered_items = format_numbered_list(chapter_info)
-        display_multi_column(numbered_items)
+        term_width = display_boxed_title("CHAPTER SELECTION")
+        display_multi_column_items(numbered_items, term_width)
 
         print("─" * term_width)
-        print(" " * content_padding + "SELECTION OPTIONS:")
-        print(" " * content_padding + "all       - Select all chapters")
-        print(" " * content_padding + "newestN   - Select newest N (e.g. 'newest5')")
-        print(
-            " " * content_padding + "x-y       - Select range by index (e.g. '10-20')"
-        )
-        print(" " * content_padding + "x,y,z     - Select specific indexes")
-        print(" " * content_padding + ".x        - Select decimal chapters like .5")
-        print(" " * content_padding + "s:term    - Filter chapters by name")
-        print(
-            " " * content_padding
-            + "1.0       - Select chapter number exactly (e.g. 1.0)"
-        )
-        print(" " * content_padding + "q         - Quit selection")
+        print("  SELECTION OPTIONS:")
+        print("  all         - Select all chapters")
+        print("  newestN     - Select newest N (e.g., newest5)")
+        print("  x-y         - Index range (e.g., 10-20)")
+        print("  x,y,z       - Specific indexes (e.g., 1,3,5)")
+        print("  .x          - Select decimal chapters like .5")
+        print("  s:term      - Filter by name keyword")
+        print("  1.0         - Select by exact chapter number")
+        print("  q           - Quit without selecting")
         print("─" * term_width)
 
-        selection = (
-            input(" " * content_padding + "⌨  Enter selection: ").strip().lower()
-        )
+        selection = input("⌨  Enter selection: ").strip().lower()
 
         if not selection:
-            print("\n" + " " * content_padding + "[!] Please enter a selection")
-            input(" " * content_padding + "Press Enter to continue...")
+            print("[!] Please enter a selection.")
+            input("Press Enter to continue...")
             continue
 
         if selection == "q":
@@ -106,7 +84,7 @@ def select_chapters_interactively(
 
             elif "-" in selection and not re.search(r"[a-z]", selection):
                 start, end = map(int, selection.split("-"))
-                selected = chapter_info[start - 1 : end]
+                selected = chapter_info[start - 1:end]
 
             elif "," in selection and not re.search(r"[a-z]", selection):
                 indices = set(int(x) for x in selection.split(","))
@@ -126,54 +104,40 @@ def select_chapters_interactively(
             elif selection.startswith(("search:", "s:")):
                 query = re.sub(r"^(search:|s:)", "", selection)
                 selected = [ch for ch in chapter_info if query in ch["name"].lower()]
-
                 if selected:
-                    print(f"\n╔{'═' * (term_width - 2)}╗")
-                    print(f"║{'FILTERED RESULTS'.center(term_width - 2)}║")
-                    print(f"╚{'═' * (term_width - 2)}╝")
-                    filtered_items = format_numbered_list(selected)
-                    display_multi_column(filtered_items)
+                    print("\n")
+                    term_width = display_boxed_title("FILTERED RESULTS")
+                    filtered_items = [
+                        f"{i + 1:0{pad_width}d}. {ch['name']}"
+                        for i, ch in enumerate(selected)
+                    ]
+                    display_multi_column_items(filtered_items, term_width)
 
             else:
-                # Try both index selection and chapter number selection
-                try:
-                    # First try as index (1-based)
-                    index = int(selection) - 1
-                    if 0 <= index < len(chapter_info):
-                        selected = [chapter_info[index]]
-                    else:
-                        # Then try as chapter number
-                        num = float(selection)
-                        selected = [
-                            ch for ch in chapter_info 
-                            if abs(ch["number"] - num) < 0.001
-                        ]
-                except ValueError:
-                    print("\n" + " " * content_padding + "[!] Invalid selection")
-                    input(" " * content_padding + "Press Enter to continue...")
-                    continue
+                num = float(selection)
+                selected = [
+                    ch for ch in chapter_info if abs(ch["number"] - num) < 0.001
+                ]
 
             if not selected:
-                print("\n" + " " * content_padding + "[!] No chapters matched")
-                input(" " * content_padding + "Press Enter to continue...")
+                print("[!] No chapters matched.")
+                input("Press Enter to continue...")
                 continue
 
-            print(f"\n╔{'═' * (term_width - 2)}╗")
-            print(f"║{'SELECTED CHAPTERS'.center(term_width - 2)}║")
-            print(f"╚{'═' * (term_width - 2)}╝")
-            preview_items = format_numbered_list(selected)
-            display_multi_column(preview_items)
+            print("\n")
+            term_width = display_boxed_title("SELECTED CHAPTERS")
+            preview_items = [
+                f"{i + 1:0{pad_width}d}. {ch['name']}"
+                for i, ch in enumerate(selected)
+            ]
+            display_multi_column_items(preview_items, term_width)
 
-            confirm = (
-                input(" " * content_padding + "Confirm selection? [Y/n/q] ")
-                .strip()
-                .lower()
-            )
+            confirm = input("Confirm selection? [Y/n/q] ").strip().lower()
             if confirm in ("y", ""):
                 return [ch["element"] for ch in selected]
             elif confirm == "q":
                 return []
 
         except Exception as e:
-            print("\n" + " " * content_padding + f"[!] Error: {e}")
-            input(" " * content_padding + "Press Enter to continue...")
+            print(f"[!] Error: {e}")
+            input("Press Enter to continue...")
