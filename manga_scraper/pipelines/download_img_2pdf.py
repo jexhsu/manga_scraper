@@ -46,8 +46,8 @@ class MangaDownloadPipeline(ImagesPipeline):
         """Return the download path for a manga page."""
         manga_name, chapter_name = item["manga_name"], item["chapter_name"]
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
-        clean_manga = self._clean_name(manga_name)
-        clean_chapter = self._chapter_name(chapter_name)
+        clean_manga = manga_name
+        clean_chapter = chapter_name
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
@@ -68,11 +68,6 @@ class MangaDownloadPipeline(ImagesPipeline):
                 self._convert_chapter_to_pdf(chapter_key)
 
         return item
-
-    @staticmethod
-    def _clean_name(id: str) -> str:
-        """Clean and format manga/chapter identifiers for filesystem use."""
-        return id.split("-", 1)[-1] if "-" in id else id
 
     @staticmethod
     def _chapter_name(id: str) -> str:
