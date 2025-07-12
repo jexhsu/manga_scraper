@@ -8,7 +8,7 @@ from .chapter_utils import extract_chapter_number
 
 
 def select_chapters_interactively(
-    raw_chapters: List[Any], chapter_extractor: callable
+    raw_chapters: List[Any], chapter_extractor: callable, debug_mode: bool = False
 ) -> List[Any]:
     """
     Interactive chapter selector with natural sorting and reusable display layout.
@@ -16,10 +16,17 @@ def select_chapters_interactively(
     Args:
         raw_chapters: Raw chapter objects
         chapter_extractor: Callable to extract name from each chapter
+        debug_mode: If True, automatically select first chapter
 
     Returns:
         List of selected raw chapter objects
     """
+    if debug_mode:
+        if raw_chapters:
+            print("[DEBUG] Auto-selecting first chapter only")
+            return [raw_chapters[-1]]
+        return []
+
     chapter_info = []
     for ch in raw_chapters:
         try:
@@ -41,8 +48,7 @@ def select_chapters_interactively(
     # Format chapter list with numbering
     pad_width = len(str(len(chapter_info)))
     numbered_items = [
-        f"{i + 1:0{pad_width}d}. {item['name']}"
-        for i, item in enumerate(chapter_info)
+        f"{i + 1:0{pad_width}d}. {item['name']}" for i, item in enumerate(chapter_info)
     ]
 
     while True:
@@ -84,7 +90,7 @@ def select_chapters_interactively(
 
             elif "-" in selection and not re.search(r"[a-z]", selection):
                 start, end = map(int, selection.split("-"))
-                selected = chapter_info[start - 1:end]
+                selected = chapter_info[start - 1 : end]
 
             elif "," in selection and not re.search(r"[a-z]", selection):
                 indices = set(int(x) for x in selection.split(","))
@@ -127,8 +133,7 @@ def select_chapters_interactively(
             print("\n")
             term_width = display_boxed_title("SELECTED CHAPTERS")
             preview_items = [
-                f"{i + 1:0{pad_width}d}. {ch['name']}"
-                for i, ch in enumerate(selected)
+                f"{i + 1:0{pad_width}d}. {ch['name']}" for i, ch in enumerate(selected)
             ]
             display_multi_column_items(preview_items, term_width)
 

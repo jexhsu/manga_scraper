@@ -2,7 +2,12 @@
 import re
 from typing import List, Any, Optional
 from difflib import get_close_matches
-from .display_utils import display_boxed_title, display_multi_column_items, calculate_display_width
+from .display_utils import (
+    display_boxed_title,
+    display_multi_column_items,
+    calculate_display_width,
+)
+
 
 def display_results(
     items: List[str],
@@ -27,21 +32,28 @@ def display_results(
     term_width = display_boxed_title(title, min_width, max_width)
 
     # Display items in columns
-    display_multi_column_items(
-        numbered_items,
-        term_width,
-        cols=cols,
-        max_cols=max_cols
-    )
+    display_multi_column_items(numbered_items, term_width, cols=cols, max_cols=max_cols)
+
 
 def select_manga_interactively(
-    manga_list: List[Any], 
-    manga_name_extractor: callable
+    manga_list: List[Any],
+    manga_name_extractor: callable,
+    debug_choice: Optional[int] = None,
 ) -> Optional[Any]:
-    """Interactive manga selection with search capabilities."""
+    """Interactive manga selection or auto-select in debug mode."""
     if not manga_list:
-        print("[×] No items found.")
+        print("[×] No manga items found.")
         return None
+
+    if debug_choice is not None:
+        if 0 <= debug_choice < len(manga_list):
+            print(
+                f"[DEBUG] Auto-selected manga #{debug_choice + 1}: {manga_name_extractor(manga_list[debug_choice])}"
+            )
+            return manga_list[debug_choice]
+        else:
+            print("[DEBUG] debug_choice index out of range.")
+            return None
 
     original_list = manga_list.copy()
     current_list = manga_list
@@ -103,7 +115,9 @@ def select_manga_interactively(
                 all_names = [manga_name_extractor(item) for item in original_list]
                 similar = get_close_matches(query, all_names, n=5, cutoff=0.3)
                 if similar:
-                    display_results(similar, "SIMILAR TITLES", cols=1, pad_width=pad_width)
+                    display_results(
+                        similar, "SIMILAR TITLES", cols=1, pad_width=pad_width
+                    )
                 input("↵ Press Enter to continue...")
                 current_list = original_list.copy()
                 last_search = None

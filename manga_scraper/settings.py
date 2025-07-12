@@ -91,9 +91,10 @@ PLAYWRIGHT_ABORT_REQUEST = lambda req: req.resource_type in {
 # Item Pipelines Configuration
 # =============================================
 
-# Image storage location
-IMAGES_STORE = "./downloads"
+from manga_scraper.spiders.manga_park import MangaParkSpider
 
+# Image storage location
+IMAGES_STORE = f"./downloads/{MangaParkSpider.name}/"
 # Pipeline execution order
 ITEM_PIPELINES = {
     "manga_scraper.pipelines.data_cleaning.MangaDataCleaningPipeline": 100,

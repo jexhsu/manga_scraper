@@ -1,12 +1,12 @@
 # manga_scraper/spiders/dark_gathering.py
 import re
-from scrapy import Spider
 import scrapy
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class DarkGatheringSpider(Spider):
+class DarkGatheringSpider(BaseMangaSpider):
     name = "dark_gathering"
     base_url = "https://dark-gathering.com"
 

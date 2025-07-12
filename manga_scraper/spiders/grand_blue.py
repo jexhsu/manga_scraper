@@ -1,12 +1,13 @@
 # manga_scraper/spiders/grand_blue.py
 import re
-from scrapy import Spider
 import scrapy
+from manga_scraper.spiders import BaseMangaSpider
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class GrandBlueSpider(Spider):
+class GrandBlueSpider(BaseMangaSpider):
     name = "grand_blue"
     base_url = "https://w38.readgrandblue.com"
 

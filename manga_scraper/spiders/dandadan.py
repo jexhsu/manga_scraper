@@ -1,12 +1,12 @@
 # manga_scraper/spiders/dandadan.py
 import re
-from scrapy import Spider
 import scrapy
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class AjinSpider(Spider):
+class AjinSpider(BaseMangaSpider):
     name = "dandadan"
     base_url = "https://dandadan.net"
 
@@ -18,7 +18,7 @@ class AjinSpider(Spider):
         ).group(1),
         use_playwright=False,
         chapter_parser_config=ChapterParserConfig.create_site_config(
-            page_urls_selector="div.entry-content div.separator noscript img::attr(src)",
+            page_urls_selector="div.entry-content div.separator img::attr(src)",
             async_cleanup=False,
         ),
     )

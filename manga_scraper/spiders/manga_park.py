@@ -1,12 +1,16 @@
 # manga_scraper/spiders/manga_park.py
 from urllib.parse import quote, urljoin
-from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
+
 import scrapy
+from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
+from manga_scraper.spiders import BaseMangaSpider
 from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
 from .common.manga_page import parse_manga_page
 from manga_scraper.utils.search_filter import select_manga_interactively
+from manga_scraper.spiders import BaseMangaSpider
 
-class MangaParkSpider(scrapy.Spider):
+
+class MangaParkSpider(BaseMangaSpider):
     name = "manga_park"
     base_url = "https://mangapark.io"
 
@@ -27,10 +31,6 @@ class MangaParkSpider(scrapy.Spider):
         ),
     )
 
-    def __init__(self, search_term="a girl on the shore", **kwargs):
-        super().__init__(**kwargs)
-        self.search_term = search_term
-
     def start_requests(self):
         url = (
             f"{self.base_url}/search?word={quote(self.search_term)}&sortby=field_follow"
@@ -44,12 +44,15 @@ class MangaParkSpider(scrapy.Spider):
         selected = select_manga_interactively(
             search_items,
             manga_name_extractor=lambda el: el.css('span[q\\:key="Ts_1"]')
-                .xpath("string(.)")
-                .get()
-                .strip(),
+            .xpath("string(.)")
+            .get()
+            .strip(),
+            debug_choice=0 if self.debug_mode else None,
         )
 
-        manga_name = selected.css('span[q\\:key="Ts_1"]').xpath("string(.)").get().strip()
+        manga_name = (
+            selected.css('span[q\\:key="Ts_1"]').xpath("string(.)").get().strip()
+        )
         manga_url = selected.css("h3 a::attr(href)").get()
         manga_id = manga_url.split("/")[-1]
         manga_follows = selected.css('div[id^="comic-follow-swap-"] span::text').get()

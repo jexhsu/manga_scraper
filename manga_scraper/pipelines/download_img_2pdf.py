@@ -9,6 +9,8 @@ import re
 from manga_scraper.items import ChapterPageLinkItem, PageItem
 from scrapy.pipelines.images import ImagesPipeline
 
+from manga_scraper.utils.chapter_utils import extract_chapter_number
+
 
 class MangaDownloadPipeline(ImagesPipeline):
     """Pipeline for downloading manga pages and converting chapters to PDF."""
@@ -40,7 +42,9 @@ class MangaDownloadPipeline(ImagesPipeline):
         """Return the download path for a manga page."""
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
         clean_manga = self._clean_name(manga_id)
-        clean_chapter = self._chapter_name(chapter_id)
+        clean_chapter = extract_chapter_number(chapter_id)
+        print(clean_chapter)
+        breakpoint()
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
@@ -70,7 +74,7 @@ class MangaDownloadPipeline(ImagesPipeline):
     @staticmethod
     def _chapter_name(id: str) -> str:
         """Clean and format chapter identifiers for filesystem use."""
-        match = re.search(r"(chapter-\d+)$", id)
+        match = re.search(r"(ch(?:apter)?[-\w\.]+)", id, re.IGNORECASE)
         return match.group(1) if match else id
 
     def _convert_chapter_to_pdf(self, chapter_key: Tuple[str, str]) -> None:

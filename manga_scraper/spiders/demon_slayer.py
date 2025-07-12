@@ -1,14 +1,14 @@
 # manga_scraper/spiders/demon_slayer.py
 import re
-from scrapy import Spider
 import scrapy
 from scrapy_playwright.page import PageMethod
 from scrapy.http import HtmlResponse
 from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class DemonSlayerSpider(Spider):
+class DemonSlayerSpider(BaseMangaSpider):
     name = "demon_slayer"
     base_url = "https://www.demonslayerr.com"
 

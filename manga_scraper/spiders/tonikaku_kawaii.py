@@ -1,12 +1,12 @@
 # manga_scraper/spiders/tonikaku_kawaii.py
 import re
-from scrapy import Spider
 import scrapy
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class TonikakuKawaiiSpider(Spider):
+class TonikakuKawaiiSpider(BaseMangaSpider):
     name = "tonikaku_kawaii"
     base_url = "https://w3.tonikakukawaii.com"
 

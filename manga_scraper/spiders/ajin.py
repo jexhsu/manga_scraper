@@ -1,12 +1,12 @@
 # manga_scraper/spiders/ajin.py
 import re
-from scrapy import Spider
 import scrapy
+from manga_scraper.spiders import BaseMangaSpider
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
 
 
-class AjinSpider(Spider):
+class AjinSpider(BaseMangaSpider):
     name = "ajin"
     base_url = "https://w9.ajinmanga.online"
 

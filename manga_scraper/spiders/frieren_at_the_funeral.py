@@ -1,13 +1,13 @@
 # manga_scraper/spiders/furieren_at_the_funeral.py
 import re
-from scrapy import Spider
 import scrapy
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
 # expired
-class FrierenAtTheFuneralSpider(Spider):
+class FrierenAtTheFuneralSpider(BaseMangaSpider):
     name = "frieren_at_the_funeral"
     base_url = "https://sousou-no-frieren.online"
 

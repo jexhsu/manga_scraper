@@ -1,12 +1,12 @@
 # manga_scraper/spiders/too_many_losing_heroines.py
 import re
-from scrapy import Spider
 import scrapy
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class TooManyLosingHeroinesSpider(Spider):
+class TooManyLosingHeroinesSpider(BaseMangaSpider):
     name = "too_many_losing_heroines"
     base_url = "https://toomanylosingheroines.com"
 

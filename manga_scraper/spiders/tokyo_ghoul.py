@@ -1,12 +1,12 @@
 # manga_scraper/spiders/tokyo_ghoul.py
 import re
-from scrapy import Spider
 import scrapy
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class TokyoGhoulSpider(Spider):
+class TokyoGhoulSpider(BaseMangaSpider):
     name = "tokyo_ghoul"
     base_url = "https://tgmanga.com"
 

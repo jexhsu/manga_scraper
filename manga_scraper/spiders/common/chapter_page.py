@@ -16,11 +16,13 @@ async def parse_chapter_page(response):
     # Get config from spider's manga parser config
     config = spider.manga_parser_config["chapter_parser_config"]
 
-    page_urls = (
+    urls = (
         config["page_urls_extractor"](response)
         if config.get("page_urls_extractor") is not None
         else response.css(config["page_urls_selector"]).getall()
     )
+
+    page_urls = urls[:1] if spider.debug_mode else None
 
     for idx, url in enumerate(page_urls, start=1):
         yield PageItem(

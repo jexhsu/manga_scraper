@@ -1,12 +1,12 @@
 # manga_scraper/spiders/kajiu_no_8.py
 import re
-from scrapy import Spider
 import scrapy
 from manga_scraper.spiders.common.config import MangaParserConfig, ChapterParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
+from manga_scraper.spiders import BaseMangaSpider
 
 
-class KaijuNo8Spider(Spider):
+class KaijuNo8Spider(BaseMangaSpider):
     name = "kaiju_no_8"
     base_url = "https://kaiju-no8.com"
 
