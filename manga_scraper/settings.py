@@ -17,9 +17,6 @@ ADDONS = {}
 # Default encoding for feed exports
 FEED_EXPORT_ENCODING = "utf-8"
 
-# Database configuration
-DATABASE_NAME = "manga_park"
-
 
 # =============================================
 # Crawler Behavior Settings
@@ -90,16 +87,16 @@ PLAYWRIGHT_ABORT_REQUEST = lambda req: req.resource_type in {
 # =============================================
 # Item Pipelines Configuration
 # =============================================
+from manga_scraper.spiders.copy_manga import CopyMangaSpider
 
 # Image storage location
-IMAGES_STORE = "./downloads"
+IMAGES_STORE = f"./downloads/{CopyMangaSpider.name}/"
 
 # Pipeline execution order
 ITEM_PIPELINES = {
     "manga_scraper.pipelines.data_cleaning.MangaDataCleaningPipeline": 100,
     "manga_scraper.pipelines.download_img_2pdf.MangaDownloadPipeline": 200,
 }
-
 
 # =============================================
 # Disabled/Commented Settings (For Reference)

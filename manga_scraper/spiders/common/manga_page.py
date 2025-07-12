@@ -7,6 +7,10 @@ import json
 
 from manga_scraper.utils.decrypt_content_key import decrypt_content_key
 from manga_scraper.utils.js_var_extractor import extract_js_var
+import urllib3
+
+urllib3.disable_warnings()
+
 
 def parse_manga_page(
     response,
@@ -31,24 +35,21 @@ def parse_manga_page(
     )
 
     content_key = json.loads(content_key_response.text).get("results", "")
-    dio_key = extract_js_var(response, "dio")
+    aes_key = extract_js_var(response)
 
-    decrypted = decrypt_content_key(content_key, dio_key)
-
-    chapters_by_group = decrypted.get("groups", {})
-
-    raw_chapters = []
-    for group in chapters_by_group.values():
-        raw_chapters.extend(group.get("chapters", []))
+    decrypted = decrypt_content_key(content_key, aes_key)
 
     filtered = select_chapters_interactively(
-        raw_chapters, chapter_extractor=config["chapter_number_extractor"]
+        decrypted,
+        chapter_extractor=config["chapter_number_extractor"],
+        debug_choice="g1(c(1)),g2(v(1)),g3(c(1))" if spider.debug_mode else None,
     )
 
     for chapter in filtered:
         chapter_id = chapter["id"]
         chapter_number = chapter["name"]
-        chapter_url = "/comic/jinjidejuren/chapter/" + chapter_id
+        chapter_url = f"/comic/{manga_id}/chapter/" + chapter_id
+        chapter_group = chapter["group"]
         chapter_type = chapter["type"]
 
         yield ChapterItem(
@@ -62,7 +63,6 @@ def parse_manga_page(
         yield MangaChapterLinkItem(
             manga_id=manga_id,
             chapter_id=chapter_id,
-            total_chapters=len(raw_chapters),
         )
 
         yield response.follow(
@@ -74,6 +74,7 @@ def parse_manga_page(
                 "chapter_number_name": chapter_number,
                 "chapter_id": chapter_id,
                 "spider": spider,
-                "chapter_type": chapter_type
+                "chapter_group": chapter_group,
+                "chapter_type": chapter_type,
             },
         )

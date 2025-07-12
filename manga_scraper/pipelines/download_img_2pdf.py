@@ -41,6 +41,7 @@ class MangaDownloadPipeline(ImagesPipeline):
                     "manga_id": item["manga_id"],
                     "chapter_name": item["chapter_name"],
                     "chapter_id": chapter_id,
+                    "chapter_group": item["chapter_group"],
                     "chapter_type": item["chapter_type"],
                     "page_number": item["page_number"],
                 },
@@ -49,48 +50,58 @@ class MangaDownloadPipeline(ImagesPipeline):
     def file_path(self, request, response=None, info=None, *, item=None):
         """Return the download path for a manga page."""
         chapter_type_map = {
-            1: "話",   # Chapters
-            2: "卷",     # Volumes
-            3: "番外",   # Extras
+            1: "話",  # Chapters
+            2: "卷",  # Volumes
+            3: "番外",  # Extras
         }
-        manga_name, chapter_type, chapter_name = item["manga_name"], item["chapter_type"], item["chapter_name"]
+        chapter_group_map = {
+            "default": "默認",
+            "tankobon": "单行本",
+            "karapeji": "全彩版",
+        }
+        manga_name, chapter_group, chapter_type, chapter_name = (
+            item["manga_name"],
+            item["chapter_group"],
+            item["chapter_type"],
+            item["chapter_name"],
+        )
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
         clean_manga = self._clean_name(manga_name)
-        chapter_type = chapter_type_map.get(item["chapter_type"], "未知类型")
+        chapter_group = chapter_group_map.get(item["chapter_group"], "未知组别")
+        chapter_type = chapter_type_map.get(item["chapter_type"], "未知章节")
         clean_chapter = self._chapter_name(chapter_name)
-
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
-            self.store.basedir, clean_manga, chapter_type, clean_chapter
+            self.store.basedir, clean_manga, chapter_group, chapter_type, clean_chapter
         )
 
-        return f"{clean_manga}/{chapter_type}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
+        return f"{clean_manga}/{chapter_group}/{chapter_type}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
 
     def _enhance_image_quality(self, image_path: str) -> None:
         """
         Enhance the quality of downloaded manga images.
         Applies sharpening and contrast adjustments to improve readability.
-        
+
         Args:
             image_path: Path to the image file to be enhanced
         """
         try:
             with Image.open(image_path) as img:
                 # Convert to RGB if needed (for JPEG compatibility)
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+
                 # Apply image enhancements
                 enhancer = ImageEnhance.Sharpness(img)
                 img = enhancer.enhance(self.enhance_sharpness)
-                
+
                 enhancer = ImageEnhance.Contrast(img)
                 img = enhancer.enhance(self.enhance_contrast)
-                
+
                 # Save the enhanced image (overwrite original)
                 img.save(image_path, quality=95, optimize=True)
-                
+
         except Exception as e:
             print(f"Error enhancing image {image_path}: {e}")
 
@@ -103,7 +114,7 @@ class MangaDownloadPipeline(ImagesPipeline):
             # Get the downloaded file path from results
             for success, file_info in results:
                 if success:
-                    image_path = file_info['path']
+                    image_path = file_info["path"]
                     full_path = os.path.join(self.store.basedir, image_path)
                     self._enhance_image_quality(full_path)
 

@@ -3,6 +3,7 @@ import shutil
 import math
 from typing import List
 
+
 def calculate_display_width(s: str) -> int:
     """Calculate display width considering CJK characters as double-width."""
     width = 0
@@ -12,6 +13,7 @@ def calculate_display_width(s: str) -> int:
         else:
             width += 1
     return width
+
 
 def display_boxed_title(title: str, min_width: int = 60, max_width: int = 120) -> int:
     """
@@ -24,13 +26,14 @@ def display_boxed_title(title: str, min_width: int = 60, max_width: int = 120) -
     print(f"╚{'═' * (term_width - 2)}╝")
     return term_width
 
+
 def display_multi_column_items(
     items: List[str],
     term_width: int,
     cols: int = None,
     content_padding: int = 4,
     min_col_width: int = 30,
-    max_cols: int = 4
+    max_cols: int = 4,
 ) -> None:
     """Display items in multiple columns with proper alignment."""
     if not items:

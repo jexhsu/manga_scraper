@@ -6,7 +6,6 @@ from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
 from manga_scraper.spiders.common.manga_page import parse_manga_page
 from manga_scraper.utils.search_filter import select_manga_interactively
-from scrapy_playwright.page import PageMethod
 
 
 class CopyMangaSpider(scrapy.Spider):
@@ -21,12 +20,13 @@ class CopyMangaSpider(scrapy.Spider):
         ),
     )
 
-    def __init__(self, search_term="错位的青春", **kwargs):
+    def __init__(self, search_term="错位的青春", debug=False, **kwargs):
         super().__init__(**kwargs)
         self.search_term = search_term
+        self.debug_mode = str(debug).lower() in ("true", "1", "yes")
 
     def start_requests(self):
-        url = f"{self.base_url}/api/kb/web/searchbq/comics?offset=0&platform=2&limit=12&q={self.search_term}&q_type="
+        url = f"{self.base_url}/api/kb/web/searchbf/comics?offset=0&platform=2&limit=12&q={self.search_term}&q_type="
 
         yield scrapy.Request(
             url=url,
@@ -49,7 +49,9 @@ class CopyMangaSpider(scrapy.Spider):
         ]
 
         selected = select_manga_interactively(
-            search_items, manga_name_extractor=lambda el: el["name"]
+            search_items,
+            manga_name_extractor=lambda el: el["name"],
+            debug_choice=0 if self.debug_mode else None,
         )
 
         manga_name = selected["name"]

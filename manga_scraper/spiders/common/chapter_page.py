@@ -11,24 +11,24 @@ def parse_chapter_page(response):
     Args:
         response (scrapy.Response): JSON response from chapter endpoint.
     """
-    with open("test.html", "wb") as f:
-        f.write(response.body)
-
     spider = response.meta["spider"]
     manga_id = response.meta["manga_id"]
     manga_name = response.meta["manga_name"]
     chapter_id = response.meta["chapter_id"]
-    chapter_type = response.meta['chapter_type']
+    chapter_group = response.meta["chapter_group"]
+    chapter_type = response.meta["chapter_type"]
     chapter_number_name = response.meta["chapter_number_name"]
 
     config = spider.manga_parser_config["chapter_parser_config"]
 
     content_key = response.css(config["content_key_selector"]).get()
-    jojo_key = extract_js_var(response, "jojo")
+    aes_key = extract_js_var(response)
 
-    page_objs = decrypt_content_key(content_key, jojo_key)
+    page_objs = decrypt_content_key(content_key, aes_key)
 
-    page_urls = [page["url"] for page in page_objs if "url" in page]
+    urls = [p["url"] for p in page_objs if "url" in p]
+
+    page_urls = urls[:1] if spider.debug_mode else None
 
     for idx, url in enumerate(page_urls, start=1):
         yield PageItem(
@@ -36,6 +36,7 @@ def parse_chapter_page(response):
             manga_id=manga_id,
             chapter_name=chapter_number_name,
             chapter_id=chapter_id,
+            chapter_group=chapter_group,
             chapter_type=chapter_type,
             page_number=idx,
             page_url=url,

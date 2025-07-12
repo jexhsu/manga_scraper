@@ -1,31 +1,28 @@
-# manga_scraper/utils/js_var_extractor.py
+#  manga_scraper/utils/js_var_extractor.py
 import re
 from scrapy.http import Response
+from typing import Optional
 
 
-def extract_js_var(response: Response, var_name: str) -> str:
+def extract_js_var(response: Response, length: int = 16) -> Optional[str]:
     """
-    Extract the value of a JavaScript variable from inline <script> tags in the response HTML.
+    Extract the value of any JavaScript variable assignment from <script> tags
+    where the value is exactly of given length.
 
     Args:
-        response (scrapy.Response): The HTTP response object containing HTML.
-        var_name (str): The name of the JavaScript variable to extract.
+        response (scrapy.Response): Scrapy Response object containing HTML.
+        length (int): Expected length of the variable value. Default is 16.
 
     Returns:
-        str: The extracted value of the JavaScript variable.
-
-    Raises:
-        ValueError: If the variable is not found in any <script> tag.
+        str | None: The first matching variable value of exact length, or None if not found.
     """
-    # Join all JavaScript code inside <script> tags into a single string
+    # Combine all inline script contents into one text block
     script_text = "".join(response.css("script::text").getall())
 
-    # Regex pattern to find: var var_name = 'value' or "value"
-    pattern = rf"var\s+{re.escape(var_name)}\s*=\s*['\"]([^'\"]+)['\"]"
+    # Match pattern like: var xyz = 'xxxxxxxxxxxxxxxx';
+    pattern = rf"var\s+\w+\s*=\s*['\"]([^'\"]{{{length}}})['\"]"
     match = re.search(pattern, script_text)
 
     if match:
         return match.group(1)
-
-    # Not found, raise error for debug
-    raise ValueError(f"JavaScript variable '{var_name}' not found in any <script> tag.")
+    return None
