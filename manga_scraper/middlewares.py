@@ -147,8 +147,26 @@ class ScrapeOpsFakeUserAgentMiddleware:
             self.scrapeops_fake_user_agents_active = True
 
     def process_request(self, request, spider):
+        # Pick a random browser header from the fetched list
         random_browser_header = self._get_random_browser_header()
 
+        # Optional: Filter out mobile user agents to avoid mobile redirects
+        user_agent = random_browser_header.get("user-agent", "").lower()
+        if "mobile" in user_agent or "android" in user_agent or "iphone" in user_agent:
+            # If the UA looks like mobile, force a desktop UA instead
+            # For example, pick the first desktop UA from self.headers_list
+            desktop_agents = [
+                h
+                for h in self.headers_list
+                if "mobile" not in h.get("user-agent", "").lower()
+                and "android" not in h.get("user-agent", "").lower()
+                and "iphone" not in h.get("user-agent", "").lower()
+            ]
+            if desktop_agents:
+                random_browser_header = desktop_agents[0]  # pick first desktop UA
+            # else fallback to current random_browser_header anyway
+
+        # Set headers for the request from the selected browser header
         for key in [
             "accept-language",
             "sec-fetch-user",

@@ -8,6 +8,7 @@ import re
 
 from manga_scraper.items import ChapterPageLinkItem, PageItem
 from scrapy.pipelines.images import ImagesPipeline
+from manga_scraper.spiders.manhuagui import ManhuaGuiSpider
 
 
 class MangaDownloadPipeline(ImagesPipeline):
@@ -28,33 +29,51 @@ class MangaDownloadPipeline(ImagesPipeline):
 
         if isinstance(item, PageItem):
             manga_id = item["manga_id"]
+            chapter_id = item["chapter_id"]
             yield scrapy.Request(
                 item["page_url"],
-                headers={
-                    "Referer": f"https://mangafire.to/ajax/read/{manga_id}/volume/en"
-                },
+                headers={"Referer": ManhuaGuiSpider.base_url},
                 meta={
                     "manga_name": item["manga_name"],
                     "manga_id": manga_id,
+                    "chapter_group": item["chapter_group"],
+                    "chapter_type": item["chapter_type"],
                     "chapter_name": item["chapter_name"],
-                    "chapter_id": item["chapter_id"],
+                    "chapter_id": chapter_id,
                     "page_number": item["page_number"],
                 },
             )
 
     def file_path(self, request, response=None, info=None, *, item=None):
         """Return the download path for a manga page."""
-        manga_name, chapter_name = item["manga_name"], item["chapter_name"]
+        chapter_type_map = {
+            1: "話",  # Chapters
+            2: "卷",  # Volumes
+            3: "番外",  # Extras
+        }
+        chapter_group_map = {
+            "chapters": "单话",
+            "volumes": "单行本",
+            "extras": "番外篇",
+        }
+        manga_name, chapter_group, chapter_type, chapter_name = (
+            item["manga_name"],
+            item["chapter_group"],
+            item["chapter_type"],
+            item["chapter_name"],
+        )
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
-        clean_manga = manga_name
-        clean_chapter = chapter_name
+        clean_manga = self._clean_name(manga_name)
+        chapter_group = chapter_group_map.get(item["chapter_group"], "未知组别")
+        chapter_type = chapter_type_map.get(item["chapter_type"], "未知章节")
+        clean_chapter = self._chapter_name(chapter_name)
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
-            self.store.basedir, clean_manga, clean_chapter
+            self.store.basedir, clean_manga, chapter_group, chapter_type, clean_chapter
         )
 
-        return f"{clean_manga}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
+        return f"{clean_manga}/{chapter_group}/{chapter_type}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
 
     def item_completed(self, results, item, info):
         """Handle completed downloads and trigger PDF conversion when ready."""
@@ -68,6 +87,11 @@ class MangaDownloadPipeline(ImagesPipeline):
                 self._convert_chapter_to_pdf(chapter_key)
 
         return item
+
+    @staticmethod
+    def _clean_name(id: str) -> str:
+        """Clean and format manga/chapter identifiers for filesystem use."""
+        return id.split("-", 1)[-1] if "-" in id else id
 
     @staticmethod
     def _chapter_name(id: str) -> str:

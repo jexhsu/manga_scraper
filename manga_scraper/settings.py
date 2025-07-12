@@ -17,10 +17,6 @@ ADDONS = {}
 # Default encoding for feed exports
 FEED_EXPORT_ENCODING = "utf-8"
 
-# Database configuration
-DATABASE_NAME = "manga_park"
-
-
 # =============================================
 # Crawler Behavior Settings
 # =============================================
@@ -91,8 +87,10 @@ PLAYWRIGHT_ABORT_REQUEST = lambda req: req.resource_type in {
 # Item Pipelines Configuration
 # =============================================
 
+from manga_scraper.spiders.manhuagui import ManhuaGuiSpider
+
 # Image storage location
-IMAGES_STORE = "./downloads"
+IMAGES_STORE = f"./downloads/{ManhuaGuiSpider.name}/"
 
 # Pipeline execution order
 ITEM_PIPELINES = {
