@@ -17,7 +17,8 @@ def parse_chapter_page(response):
     chapter_number_name = response.meta["chapter_number_name"]
 
     config = spider.manga_parser_config["chapter_parser_config"]
-    page_urls = response.css(config["page_urls_selector"]).getall()
+    urls = response.css(config["page_urls_selector"]).getall()
+    page_urls = urls[:1] if spider.debug_mode else None
 
     for idx, url in enumerate(page_urls, start=1):
         yield PageItem(

@@ -25,9 +25,10 @@ class WeebCentralSpider(scrapy.Spider):
         use_playwright=False,
     )
 
-    def __init__(self, search_term="a girl on the shore", **kwargs):
+    def __init__(self, search_term="a girl on the shore", debug=False, **kwargs):
         super().__init__(**kwargs)
         self.search_term = search_term
+        self.debug_mode = str(debug).lower() in ("true", "1", "yes")
 
     def start_requests(self):
 
@@ -46,6 +47,7 @@ class WeebCentralSpider(scrapy.Spider):
         selected = select_manga_interactively(
             search_items,
             manga_name_extractor=lambda el: el.css("div.text-left::text").get(),
+            debug_choice=0 if self.debug_mode else None,
         )
 
         manga_name = selected.css("div.text-left::text").get().strip()

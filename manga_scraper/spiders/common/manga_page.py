@@ -20,7 +20,9 @@ def parse_manga_page(
     raw_chapters = response.css(config["chapters_selector"])
 
     filtered = select_chapters_interactively(
-        raw_chapters, chapter_extractor=config["chapter_number_extractor"]
+        raw_chapters,
+        chapter_extractor=config["chapter_number_extractor"],
+        debug_mode=spider.debug_mode,
     )
 
     for chapter in filtered:

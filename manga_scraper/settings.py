@@ -91,8 +91,10 @@ PLAYWRIGHT_ABORT_REQUEST = lambda req: req.resource_type in {
 # Item Pipelines Configuration
 # =============================================
 
+from manga_scraper.spiders.weeb_central import WeebCentralSpider
+
 # Image storage location
-IMAGES_STORE = "./downloads"
+IMAGES_STORE = f"./downloads/{WeebCentralSpider.name}/"
 
 # Pipeline execution order
 ITEM_PIPELINES = {
