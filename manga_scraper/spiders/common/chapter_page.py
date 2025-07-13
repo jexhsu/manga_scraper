@@ -2,6 +2,8 @@
 from manga_scraper.items import ChapterPageLinkItem, PageItem
 from pprint import pprint
 
+from manga_scraper.utils.html_parser import extract_urls_from_qwik_json
+
 
 async def parse_chapter_page(response):
     """
@@ -16,11 +18,14 @@ async def parse_chapter_page(response):
     # Get config from spider's manga parser config
     config = spider.manga_parser_config["chapter_parser_config"]
 
-    urls = (
-        config["page_urls_extractor"](response)
-        if config.get("page_urls_extractor") is not None
-        else response.css(config["page_urls_selector"]).getall()
-    )
+    if spider.manga_parser_config["use_cookie"]:
+        urls = extract_urls_from_qwik_json(response)
+    else:
+        urls = (
+            config["page_urls_extractor"](response)
+            if config.get("page_urls_extractor") is not None
+            else response.css(config["page_urls_selector"]).getall()
+        )
 
     page_urls = urls[:1] if spider.debug_mode else None
 

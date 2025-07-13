@@ -61,8 +61,11 @@ def parse_manga_page(response, selector=None):
         if site_config.get("use_playwright", False):
             meta.update(setup_playwright(wait_for))
 
+        cookies = spider.cookies if site_config.get("use_cookie", False) else None
+
         yield response.follow(
             chapter_url,
             callback=parse_chapter_page,
+            cookies=cookies,
             meta=meta,
         )

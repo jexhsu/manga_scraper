@@ -5,6 +5,7 @@ import scrapy
 from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 from manga_scraper.spiders import BaseMangaSpider
 from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
+from manga_scraper.utils.cookie_utils import get_vivaldi_cookies
 from .common.manga_page import parse_manga_page
 from manga_scraper.utils.search_filter import select_manga_interactively
 from manga_scraper.spiders import BaseMangaSpider
@@ -12,7 +13,9 @@ from manga_scraper.spiders import BaseMangaSpider
 
 class MangaParkSpider(BaseMangaSpider):
     name = "manga_park"
-    base_url = "https://mangapark.io"
+    domain = "mangapark.io"
+    base_url = f"https://{domain}"
+    cookies = get_vivaldi_cookies(domain)
 
     custom_settings = {
         "DEPTH_LIMIT": 3,
@@ -24,10 +27,11 @@ class MangaParkSpider(BaseMangaSpider):
         chapter_id_extractor=lambda url: url.split("/")[-1],
         chapter_number_extractor=lambda el: el.css("a::text").get(),
         chapter_text_extractor=lambda el: el.css("span[q\\:key='8t_1']::text").get(),
-        use_playwright=True,
+        use_playwright=False,
+        use_cookie=True,
         chapter_parser_config=ChapterParserConfig.create_site_config(
             page_urls_selector="div[data-name='image-item'] img::attr(src)",
-            async_cleanup=True,
+            async_cleanup=False,
         ),
     )
 

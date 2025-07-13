@@ -43,8 +43,6 @@ class MangaDownloadPipeline(ImagesPipeline):
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
         clean_manga = self._clean_name(manga_id)
         clean_chapter = extract_chapter_number(chapter_id)
-        print(clean_chapter)
-        breakpoint()
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
