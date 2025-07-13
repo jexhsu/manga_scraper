@@ -81,6 +81,7 @@ class PageItem(BaseItem):
     manga_name = scrapy.Field()
     manga_id = scrapy.Field()
     chapter_name = scrapy.Field()
+    language = scrapy.Field()
     chapter_id = scrapy.Field()
     page_id = scrapy.Field()
     page_url = scrapy.Field()

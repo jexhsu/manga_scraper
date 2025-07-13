@@ -18,13 +18,14 @@ def parse_chapter_page(response):
 
     images = json.loads(response.text).get("result", {}).get("images", [])
     urls = [img[0].replace("\\/", "/") for img in images]
-    page_urls = urls[:1] if spider.debug_mode else None
+    page_urls = urls[:1] if spider.debug_mode else urls
 
     for idx, url in enumerate(page_urls, start=1):
         yield PageItem(
             manga_name=manga_name,
             manga_id=manga_id,
             chapter_name=chapter_number_name,
+            language=spider.language,
             chapter_id=chapter_id,
             page_number=idx,
             page_url=url,

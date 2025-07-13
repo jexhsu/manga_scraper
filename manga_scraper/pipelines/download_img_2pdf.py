@@ -28,15 +28,17 @@ class MangaDownloadPipeline(ImagesPipeline):
 
         if isinstance(item, PageItem):
             manga_id = item["manga_id"]
+            language = item["language"]
             yield scrapy.Request(
                 item["page_url"],
                 headers={
-                    "Referer": f"https://mangafire.to/ajax/read/{manga_id}/volume/en"
+                    "Referer": f"https://mangafire.to/ajax/read/{manga_id}/volume/{language}"
                 },
                 meta={
                     "manga_name": item["manga_name"],
                     "manga_id": manga_id,
                     "chapter_name": item["chapter_name"],
+                    "language": language,
                     "chapter_id": item["chapter_id"],
                     "page_number": item["page_number"],
                 },
@@ -44,17 +46,21 @@ class MangaDownloadPipeline(ImagesPipeline):
 
     def file_path(self, request, response=None, info=None, *, item=None):
         """Return the download path for a manga page."""
-        manga_name, chapter_name = item["manga_name"], item["chapter_name"]
+        language, manga_name, chapter_name = (
+            item["language"],
+            item["manga_name"],
+            item["chapter_name"],
+        )
         manga_id, chapter_id = item["manga_id"], item["chapter_id"]
         clean_manga = manga_name
         clean_chapter = chapter_name
 
         # Store the chapter path for PDF conversion
         self.chapter_paths[(manga_id, chapter_id)] = os.path.join(
-            self.store.basedir, clean_manga, clean_chapter
+            self.store.basedir, language, clean_manga, clean_chapter
         )
 
-        return f"{clean_manga}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
+        return f"{language}/{clean_manga}/{clean_chapter}/{request.meta['page_number']:03d}.jpg"
 
     def item_completed(self, results, item, info):
         """Handle completed downloads and trigger PDF conversion when ready."""

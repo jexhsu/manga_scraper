@@ -1,6 +1,7 @@
 import json
 from urllib.parse import quote
 import scrapy
+import os
 from scrapy.http import HtmlResponse
 from manga_scraper.items import MangaItem, SearchKeywordMangaLinkItem
 from manga_scraper.spiders.common.config import ChapterParserConfig, MangaParserConfig
@@ -29,19 +30,47 @@ class MangaFireSpider(scrapy.Spider):
         use_playwright=False,
     )
 
-    def __init__(self, search_term="a girl on the shore", debug=False, **kwargs):
+    def __init__(
+        self, search_term="a girl on the shore", debug=False, language=None, **kwargs
+    ):
         super().__init__(**kwargs)
         self.search_term = search_term
         self.debug_mode = str(debug).lower() in ("true", "1", "yes")
 
+        # Apply default language if in debug mode
+        if self.debug_mode and language is None:
+            self.language = "en"
+        elif language in ("en", "ja"):
+            self.language = language
+        else:
+            raise ValueError("`language` must be either 'en' or 'ja'")
+
     def start_requests(self):
         search_url = f"{self.base_url}/filter?keyword={quote(self.search_term)}&sort=most_relevance"
+        ajax_url = (
+            f"{self.base_url}/ajax/manga/search?keyword={quote(self.search_term)}"
+        )
         yield scrapy.Request(
             url=search_url,
-            callback=self.parse_search_page,
+            callback=self._handle_search_response,
+            errback=lambda failure: self._fallback_to_ajax(failure, ajax_url),
         )
 
-    def parse_search_page(self, response):
+    def _fallback_to_ajax(self, failure, ajax_url):
+        self.logger.warning(
+            f"Search URL failed ({failure.value}), falling back to AJAX"
+        )
+        yield scrapy.Request(url=ajax_url, callback=self._process_search_json)
+
+    def _handle_search_response(self, response):
+        """Detect response type and parse accordingly."""
+        content_type = response.headers.get("Content-Type", b"").decode()
+        if "application/json" in content_type:
+            yield from self._process_search_json(response)
+        else:
+            yield from self._parse_search_html(response)
+
+    def _parse_search_html(self, response):
         """Parse search result and request volume JSON"""
         manga_list = response.css("div.inner a.poster")
 
@@ -66,26 +95,49 @@ class MangaFireSpider(scrapy.Spider):
             manga_id=manga_id,
             total_mangas=len(manga_list),
         )
-
-        ajax_url = f"{self.base_url}/ajax/read/{manga_id}/volume/en"
+        ajax_url = f"{self.base_url}/ajax/read/{manga_id}/volume/{self.language}"
         yield scrapy.Request(
             url=ajax_url,
-            callback=self.process_json_response,
+            callback=self._process_volume_json,
             meta={"manga_name": manga_name, "manga_id": manga_id, "spider": self},
         )
 
-    def process_json_response(self, response):
-        """Process volume list from JSON"""
+    def _process_json_response(self, response, log_prefix="JSON"):
+        """Generic JSON response handler that extracts HTML and calls callback."""
         try:
             data = json.loads(response.text)
-            if data.get("status") == 200 and "html" in data.get("result", {}):
+            if data.get("status") == 200:
+                html = data.get("result", {}).get("html")
                 html_response = HtmlResponse(
                     url=response.url,
-                    body=data["result"]["html"].encode("utf-8"),
+                    body=html.encode(),
+                    encoding="utf-8",
+                    request=response.request,
+                )
+                html_response.meta.update(response.meta)
+                yield from self._parse_search_html(html_response)
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse {log_prefix} JSON: {e}")
+
+    def _process_search_json(self, response):
+        yield from self._process_json_response(response, "search")
+
+    def s_process_json_response(self, response, log_prefix="JSON"):
+        """Generic JSON response handler that extracts HTML and calls callback."""
+        try:
+            data = json.loads(response.text)
+            if data.get("status") == 200:
+                html = data.get("result", {}).get("html")
+                html_response = HtmlResponse(
+                    url=response.url,
+                    body=html.encode(),
                     encoding="utf-8",
                     request=response.request,
                 )
                 html_response.meta.update(response.meta)
                 yield from parse_manga_page(html_response)
         except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse JSON: {e}")
+            self.logger.error(f"Failed to parse {log_prefix} JSON: {e}")
+
+    def _process_volume_json(self, response):
+        yield from self.s_process_json_response(response, "volume")
