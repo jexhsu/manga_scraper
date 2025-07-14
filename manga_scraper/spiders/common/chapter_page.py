@@ -21,7 +21,7 @@ def parse_chapter_page(response):
     chapter_number_name = response.meta["chapter_number_name"]
 
     urls = extract_manhua_image_urls(response)
-    page_urls = urls[:1] if spider.debug_mode else None
+    page_urls = urls[:1] if spider.debug_mode else urls
 
     for idx, url in enumerate(page_urls, start=1):
         yield PageItem(
