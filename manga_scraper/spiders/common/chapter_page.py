@@ -28,7 +28,7 @@ def parse_chapter_page(response):
 
     urls = [p["url"] for p in page_objs if "url" in p]
 
-    page_urls = urls[:1] if spider.debug_mode else None
+    page_urls = urls[:1] if spider.debug_mode else urls
 
     for idx, url in enumerate(page_urls, start=1):
         yield PageItem(
