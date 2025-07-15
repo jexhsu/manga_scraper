@@ -14,6 +14,8 @@ class ManhuaGuiSpider(scrapy.Spider):
     """Spider for scraping manga data from manhuagui.com"""
 
     name = "manhuagui"
+    # TODO: Add __init__ parameter 'sp' or 'td' to switch between simplified/traditional Chinese
+    # "https://tw.manhuagui.com"  # Traditional Chinese site URL
     base_url = "https://www.manhuagui.com"
 
     # Static parsing config
